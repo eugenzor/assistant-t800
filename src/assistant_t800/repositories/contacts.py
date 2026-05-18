@@ -41,7 +41,6 @@ class ContactsRepository:
         """Повертає контакт за ім'ям або ``None``, якщо його немає."""
         return self._data.get(self._key(name))
 
-
     def exists(self, name: str) -> bool:
         """Перевіряє, чи зберігається у сховищі контакт з таким ім'ям."""
         return self._key(name) in self._data
