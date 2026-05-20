@@ -56,6 +56,13 @@ class Contact:
             raise ValueError(f"E-mail {new_email.value} вже існує")
         self.emails.append(new_email)
 
+    def find_email(self, email: str) -> Optional[Email]:
+        """Шукає e-mail за точним значенням і повертає його або ``None``."""
+        for e in self.emails:
+            if e.value == email:
+                return e
+        return None
+
     def set_address(self, address: str) -> None:
         """Встановлює або замінює адресу контакту."""
         self.address = Address(address)
