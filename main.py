@@ -1,7 +1,6 @@
-"""Точка входу скрипта: делегує запуск у CLI пакета ``assistant_t800``."""
+"""Script entry point delegating execution to the package CLI."""
 
 from assistant_t800.cli import main
 
 if __name__ == "__main__":
-    # Запускаємо застосунок лише при безпосередньому виклику цього файлу
     main()

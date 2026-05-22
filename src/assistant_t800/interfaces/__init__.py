@@ -1,1 +1,1 @@
-"""Пакет ``interfaces``: реалізації користувацьких інтерфейсів асистента."""
+"""Assistant interface implementations package."""

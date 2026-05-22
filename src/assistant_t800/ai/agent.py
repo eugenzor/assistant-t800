@@ -1,8 +1,7 @@
-"""Модуль AI-агента, який керує контактами користувача через інструменти.
+"""AI agent module for managing user contacts through tools.
 
-Конструктор агента на базі ``pydantic_ai``. Функції-інструменти
-визначені у модулі :mod:`assistant_t800.ai.tools`. Усі повідомлення,
-які агент повертає у чат, написані українською мовою.
+Builds a ``pydantic_ai``-based agent. Tool functions are defined in
+:mod:`assistant_t800.ai.tools`.
 """
 
 import os
@@ -21,10 +20,10 @@ from assistant_t800.ai.tools import (
     set_birthday,
 )
 
-# Назва моделі за замовчуванням. Можна перевизначити змінною середовища.
+# Default AI model name. Can be overridden via environment variable.
 DEFAULT_MODEL = "google-gla:gemini-3.1-flash-lite"
 
-# Системний промпт українською — задає роль та правила поведінки агента.
+# System prompt that defines the assistant role and behavior.
 SYSTEM_PROMPT = """\
 Ти — Арні, персональний асистент для керування контактами користувача.
 
@@ -72,11 +71,11 @@ SYSTEM_PROMPT = """\
 
 @lru_cache(maxsize=1)
 def _get_agent() -> Agent[AgentDeps, str]:
-    """Створює (один раз) та повертає налаштованого AI-агента.
+    """Create and return a configured singleton AI agent.
 
-    Модель береться зі змінної середовища ``ASSISTANT_T800_MODEL``
-    або використовується значення за замовчуванням ``DEFAULT_MODEL``.
-    Усі функції-інструменти реєструються в агенті.
+    The model name is loaded from the ``ASSISTANT_T800_MODEL``
+    environment variable or falls back to ``DEFAULT_MODEL``.
+    All available tool functions are registered in the agent.
     """
     model = os.environ.get("ASSISTANT_T800_MODEL", DEFAULT_MODEL)
     agent: Agent[AgentDeps, str] = Agent(
@@ -84,7 +83,7 @@ def _get_agent() -> Agent[AgentDeps, str]:
         deps_type=AgentDeps,
         system_prompt=SYSTEM_PROMPT,
     )
-    # Реєструємо всі доступні агенту інструменти
+    # Register all available agent tools.
     agent.tool(add_contact)
     agent.tool(add_phone)
     agent.tool(add_email)
@@ -96,6 +95,15 @@ def _get_agent() -> Agent[AgentDeps, str]:
 
 
 def run_chat(message: str, deps: AgentDeps) -> str:
-    """Синхронно надсилає повідомлення агенту та повертає його відповідь."""
+    """Send a synchronous message to the AI agent.
+
+    Args:
+        message: User message for the agent.
+        deps: Runtime dependencies container.
+
+    Returns:
+        Agent response text.
+    """
     result = _get_agent().run_sync(message, deps=deps)
+
     return result.output

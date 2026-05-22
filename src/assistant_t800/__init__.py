@@ -1,4 +1,4 @@
-"""Пакет ``assistant_t800``: особистий асистент із AI-режимом і TUI."""
+"""T800 personal assistant package."""
 
 from assistant_t800.cli import main
 

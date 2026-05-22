@@ -1,104 +1,275 @@
-# Персональний Assistant T800
+# Assistant T800
 
-Термінальний AI-асистент для керування контактами.
+AI-powered terminal assistant for contact management.
+
+Assistant T800 is a Python 3.13+ terminal application that combines a Textual-based TUI with AI-assisted contact handling. The current version focuses on managing contacts through a natural-language AI interface.
 
 ---
 
-## Встановлення та запуск
+## Features
 
-### Передумови
+- AI-powered contact management
+- Modern terminal UI built with Textual
+- Contact storage with:
+  - names
+  - phone numbers
+  - email addresses
+  - birthdays
+  - physical addresses
+- Contact validation
+- Interactive AI chat interface
+- Gemini AI integration via `pydantic-ai`
+- Python 3.13+ support
+
+---
+
+## Requirements
 
 - Python 3.13+
-- [uv](https://docs.astral.sh/uv/) — менеджер пакетів та середовищ
+- Git
+- Google Gemini API key
 
-Встановити `uv` (якщо ще не встановлено):
+`uv` is optional. The project can be installed and run with standard Python tools: `venv` and `pip`.
 
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
+---
 
-### 1. Клонуйте репозиторій
+## Installation
+
+### 1. Clone the repository
 
 ```bash
 git clone <repo-url>
 cd assistant-t800
 ```
 
-### 2. Налаштуйте змінні середовища
+---
 
-Скопіюйте файл прикладу та додайте свій API-ключ:
+## 2. Create and activate a virtual environment
+
+### Windows CMD
+
+```cmd
+py -3.13 -m venv .venv
+.venv\Scripts\activate.bat
+```
+
+### Windows PowerShell
+
+```powershell
+py -3.13 -m venv .venv
+.venv\Scripts\Activate.ps1
+```
+
+If PowerShell blocks script execution, run:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+Then activate the environment again.
+
+### Linux / macOS
+
+```bash
+python3.13 -m venv .venv
+source .venv/bin/activate
+```
+
+---
+
+## 3. Install dependencies
+
+### Standard installation
+
+```bash
+pip install -r requirements-ai.txt
+```
+
+If you also need development tools:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+---
+
+## 4. Configure environment variables
+
+Copy the example configuration file:
+
+### Windows CMD
+
+```cmd
+copy .env.example .env
+```
+
+### Windows PowerShell
+
+```powershell
+Copy-Item .env.example .env
+```
+
+### Linux / macOS
 
 ```bash
 cp .env.example .env
 ```
 
-Відкрийте `.env` і замініть `xxx` на ваш ключ:
+Open `.env` and replace `xxx` with your real Gemini API key:
 
 ```env
-GOOGLE_API_KEY=AIza...ваш_ключ_тут
+GOOGLE_API_KEY=AIza...your_key_here
 ```
 
-Опціонально — можна вказати іншу модель (за замовчуванням `google-gla:gemini-3.1-flash-lite`):
+Optionally, you may specify another AI model:
 
 ```env
 ASSISTANT_T800_MODEL=google-gla:gemini-3.1-flash-lite
 ```
 
+---
 
+## Getting a Free Gemini API Key
 
-#### Отримання безкоштовного API-ключа Gemini
+1. Open https://aistudio.google.com
+2. Sign in with your Google account.
+3. Accept the terms of service if prompted.
+4. Click **Get API key**.
+5. Select **Create API key** → **Create key in new project**.
+6. Copy the generated key. It usually starts with `AIza...`.
 
-1. Перейдіть на [aistudio.google.com](https://aistudio.google.com) та увійдіть через Google-акаунт.
-2. Прийміть умови використання (при першому вході).
-3. У лівому сайдбарі або на головній панелі натисніть **Get API key**.
-4. Натисніть **Create API key** → **Create key in new project**.
-5. Скопіюйте згенерований ключ (починається з `AIza...`).
+> The free tier does not require a credit card and is sufficient for development and prototyping with Gemini Flash models.
 
-> Безкоштовний рівень не потребує кредитної картки та дозволяє використовувати моделі Gemini Flash для прототипування.
+---
 
+## Running the Application
 
-### 3. Встановіть залежності
+The project uses a `src` layout. If the package is not installed in editable mode, Python must know where the source directory is located.
+
+### Recommended option: install the package in editable mode
+
+Run once after installing dependencies:
 
 ```bash
-uv sync
+pip install -e .
 ```
 
-
-### 4. Запустіть застосунок
-
-**Варіант А — через `uv run` (рекомендовано):**
+Then start the application:
 
 ```bash
-uv run assistant-t800 --enable-ai
-```
-
-або через `main.py` напряму:
-
-```bash
-uv run python main.py --enable-ai
-```
-
-**Варіант Б — через активацію віртуального середовища:**
-
-```bash
-source .venv/bin/activate
 assistant-t800 --enable-ai
 ```
 
-або:
+or:
 
 ```bash
-source .venv/bin/activate
 python main.py --enable-ai
 ```
 
 ---
 
-## Розробка
+## Alternative: run with `PYTHONPATH`
 
-Запуск лінтера:
+Use this option if you do not want to install the package in editable mode.
+
+### Windows CMD
+
+```cmd
+set PYTHONPATH=src
+python main.py --enable-ai
+```
+
+### Windows PowerShell
+
+```powershell
+$env:PYTHONPATH = "src"
+python main.py --enable-ai
+```
+
+### Linux / macOS
+
+```bash
+PYTHONPATH=src python main.py --enable-ai
+```
+
+---
+
+## Optional: Running with uv
+
+`uv` is not required, but it can simplify dependency and environment management.
+
+Install `uv` only if you want to use it:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Then run:
+
+```bash
+uv sync
+uv run assistant-t800 --enable-ai
+```
+
+or:
+
+```bash
+uv run python main.py --enable-ai
+```
+
+---
+
+## Development
+
+Install development dependencies:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+Run Ruff checks:
+
+```bash
+ruff check .
+```
+
+Format the codebase:
+
+```bash
+ruff format .
+```
+
+Run tests:
+
+```bash
+pytest
+```
+
+With `uv`, the same commands can be executed as:
 
 ```bash
 uv run ruff check .
 uv run ruff format .
+uv run pytest
 ```
+
+---
+
+## Tech Stack
+
+- Python 3.13
+- Textual
+- pydantic-ai
+- Google Gemini
+- pydantic-settings
+- python-dotenv
+- Ruff
+- pytest
+
+---
+
+## Project Status
+
+The project is currently focused on the AI-powered TUI workflow.
+
+Classic CLI mode and additional assistant features are planned for future development.

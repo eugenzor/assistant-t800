@@ -1,0 +1,6 @@
+# TUI
+textual>=0.80
+# Environment management
+python-dotenv>=1.2.2
+# Application settings
+pydantic-settings>=2.0

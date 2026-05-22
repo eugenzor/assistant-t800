@@ -1,1 +1,1 @@
-"""Пакет ``repositories``: сховища даних (in-memory та інші реалізації)."""
+"""Repository implementations package."""

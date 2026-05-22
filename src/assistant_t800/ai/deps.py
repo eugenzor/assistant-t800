@@ -1,9 +1,4 @@
-"""Залежності AI-агента: інтерфейс презентера та контейнер залежностей.
-
-Цей модуль визначає протокол ``Presenter`` для виведення інформації
-у користувацький інтерфейс та структуру ``AgentDeps``, яку отримує
-агент під час виконання інструментів.
-"""
+"""AI agent dependencies and presenter protocol definitions."""
 
 from dataclasses import dataclass
 from typing import Protocol
@@ -13,28 +8,24 @@ from assistant_t800.services.contacts import ContactsService
 
 
 class Presenter(Protocol):
-    """Протокол презентера для виведення даних користувачу.
-
-    Реалізації повинні підтримувати оновлення списку контактів
-    та виведення довільного текстового повідомлення.
-    """
+    """UI presenter protocol for displaying data to the user."""
 
     def refresh_contacts(self, contacts: list[Contact]) -> None:
-        """Оновлює відображення списком контактів."""
+        """Refresh the contact list display."""
         ...
 
     def print(self, text: str) -> None:
-        """Виводить довільний текст у панель відображення."""
+        """Display arbitrary text in the output panel."""
         ...
 
 
 @dataclass
 class AgentDeps:
-    """Контейнер залежностей, які передаються AI-агенту під час виклику.
+    """Runtime dependencies passed to the AI agent.
 
-    Атрибути:
-        contacts_service: сервіс для роботи з контактами.
-        presenter: об'єкт для виведення інформації у UI.
+    Attributes:
+        contacts_service: Service for contact management operations.
+        presenter: UI presenter implementation.
     """
 
     contacts_service: ContactsService
