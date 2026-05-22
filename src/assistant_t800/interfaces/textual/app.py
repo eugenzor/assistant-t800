@@ -14,8 +14,8 @@ from assistant_t800.services.contacts import ContactsService
 
 
 class AssistantApp(App):
-    """ Two-pane Textual application with contact display (``#display-pane``)
-        and AI chat (``#chat-pane``).
+    """Two-pane Textual application with contact display (``#display-pane``)
+    and AI chat (``#chat-pane``).
     """
 
     CSS = """
@@ -156,8 +156,7 @@ class AssistantApp(App):
         spinner = self._LOADER_FRAMES[self._loader_frame % len(self._LOADER_FRAMES)]
         self._loader_frame += 1
         self._loader.update(
-            f"[bold green]Арні:[/bold green] "
-            f"[italic]{spinner} обробляю запит…[/italic]"
+            f"[bold green]Арні:[/bold green] [italic]{spinner} обробляю запит…[/italic]"
         )
 
     def _finish_loader(self, markup: str) -> None:
