@@ -1,1 +1,1 @@
-"""Пакет ``services``: сервісний шар із бізнес-логікою асистента."""
+"""Application service layer package."""

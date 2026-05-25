@@ -1,1 +1,1 @@
-"""Пакет ``domain``: доменні моделі та типи полів асистента."""
+"""Domain package with assistant models and field types."""

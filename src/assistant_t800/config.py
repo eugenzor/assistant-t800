@@ -1,25 +1,17 @@
-"""Конфігурація застосунку, що читається з ``.env`` через ``pydantic-settings``.
-
-Налаштування експонуються через екземпляр ``settings`` і використовуються
-іншими модулями (наприклад, AI-агентом) замість прямого читання
-змінних середовища.
-"""
+"""Application configuration management."""
 
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Експортуємо змінні з ``.env`` у ``os.environ``, щоб бібліотеки, які
-# читають env-змінні напряму (наприклад, провайдер Google у pydantic-ai),
-# бачили їх без додаткового експорту в оболонці.
+# Export variables from `.env` into `os.environ` for third-party libraries
+# that access environment variables directly.
 load_dotenv()
 
 
 class Settings(BaseSettings):
-    """Налаштування застосунку Assistant T800.
-
-    Значення підвантажуються зі змінних середовища або з файлу ``.env``
-    у корені проєкту. Зіставлення імен — регістронезалежне: атрибут
-    ``assistant_t800_model`` відповідає змінній ``ASSISTANT_T800_MODEL``.
+    """
+    Application settings loaded from environment variables and `.env`.
+    ``assistant_t800_model`` -> ``ASSISTANT_T800_MODEL``
     """
 
     model_config = SettingsConfigDict(

@@ -1,7 +1,7 @@
-"""Доменна модель ``Contact``: контакт із полями телефонів, e-mail тощо.
+"""Contact domain model.
 
-Містить клас контакту з методами для керування його полями та
-валідацією через відповідні доменні типи з модуля ``fields``.
+The module defines the ``Contact`` entity and delegates field validation
+to dedicated domain field types.
 """
 
 from typing import Optional
@@ -10,18 +10,18 @@ from assistant_t800.domain.fields import Address, Birthday, Email, Name, Phone
 
 
 class Contact:
-    """Доменний об'єкт «Контакт».
+    """Contact aggregate with validated personal data fields.
 
-    Атрибути:
-        name: ім'я (обов'язкове).
-        phones: список телефонів.
-        emails: список електронних адрес.
-        address: фізична адреса (необов'язкова).
-        birthday: день народження (необов'язковий).
+    Attributes:
+        name: Required contact name.
+        phones: Contact phone numbers.
+        emails: Contact email addresses.
+        address: Optional physical address.
+        birthday: Optional birthday date.
     """
 
     def __init__(self, name: Name) -> None:
-        """Створює контакт із заданим іменем і порожніми колекціями."""
+        """Initialize a contact with required name and empty optional fields."""
         self.name: Name = name
         self.phones: list[Phone] = []
         self.emails: list[Email] = []
@@ -29,58 +29,69 @@ class Contact:
         self.birthday: Optional[Birthday] = None
 
     def add_phone(self, phone: str) -> None:
-        """Додає телефон до контакту.
+        """Add a validated unique phone number to the contact.
 
-        Кидає ``ValueError``, якщо такий телефон вже присутній.
+        Raises:
+            ValueError: If the phone number is invalid or already exists.
         """
         new_phone = Phone(phone)
-        # Перевіряємо, чи такий номер уже є серед телефонів контакту
+
         if self.find_phone(new_phone.value) is not None:
             raise ValueError(f"Телефон {new_phone.value} вже існує")
+
         self.phones.append(new_phone)
 
     def find_phone(self, phone: str) -> Optional[Phone]:
-        """Шукає телефон за точним значенням і повертає його або ``None``."""
-        for p in self.phones:
-            if p.value == phone:
-                return p
+        """Return a phone by exact value, or ``None`` if it is not present."""
+        for item in self.phones:
+            if item.value == phone:
+                return item
+
         return None
 
     def add_email(self, email: str) -> None:
-        """Додає електронну адресу до контакту.
+        """Add a validated unique email address to the contact.
 
-        Кидає ``ValueError``, якщо така адреса вже присутня.
+        Raises:
+            ValueError: If the email address is invalid or already exists.
         """
         new_email = Email(email)
+
         if self.find_email(new_email.value) is not None:
             raise ValueError(f"E-mail {new_email.value} вже існує")
+
         self.emails.append(new_email)
 
     def find_email(self, email: str) -> Optional[Email]:
-        """Шукає e-mail за точним значенням і повертає його або ``None``."""
-        for e in self.emails:
-            if e.value == email:
-                return e
+        """Return an email by exact value, or ``None`` if it is not present."""
+        for item in self.emails:
+            if item.value == email:
+                return item
+
         return None
 
     def set_address(self, address: str) -> None:
-        """Встановлює або замінює адресу контакту."""
+        """Set or replace the contact address."""
         self.address = Address(address)
 
     def set_birthday(self, birthday: str) -> None:
-        """Встановлює або замінює день народження (DD.MM.YYYY)."""
+        """Set or replace the contact birthday."""
         self.birthday = Birthday(birthday)
 
     def __str__(self) -> str:
-        """Повертає рядкове представлення контакту українською мовою."""
-        # Збираємо частини рядка відповідно до наявних полів
+        """Return a compact user-facing contact representation."""
         parts = [f"Ім'я контакту: {self.name.value}"]
+
         if self.phones:
-            parts.append("телефони: " + "; ".join(p.value for p in self.phones))
+            parts.append("телефони: " + "; ".join(item.value for item in self.phones))
+
         if self.emails:
-            parts.append("e-mail: " + "; ".join(e.value for e in self.emails))
+            parts.append("e-mail: " + "; ".join(item.value for item in self.emails))
+
         if self.address is not None:
             parts.append(f"адреса: {self.address.value}")
+
         if self.birthday is not None:
             parts.append(f"день народження: {self.birthday}")
+
         return ", ".join(parts)
