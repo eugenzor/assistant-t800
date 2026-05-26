@@ -1,0 +1,136 @@
+"""Localized message enums."""
+
+from enum import auto, Enum
+
+from assistant_t800.localization.multilang import MultiLang
+
+
+class MultiLangEnum(Enum):
+    """Enum base class with localized string conversion."""
+
+    @property
+    def text(self) -> str:
+        """Return localized enum text."""
+        return MultiLang.get(self)
+
+    def render(self, **params: object) -> str:
+        """Return localized text formatted with parameters."""
+        return self.text.format(**params)
+
+    def confirm_render(self, **params: object) -> str:
+        """Return localized confirmation prompt."""
+        return f"{self.render(**params)} ({Message.YES}/{Message.NO}): "
+
+    def confirm_check(self, answer: str) -> bool:
+        """Return True when the answer confirms the action."""
+        return answer.strip().lower() in {
+            str(Message.YES).lower(),
+            str(Message.YES)[0].lower(),
+            "yes",
+            "y",
+        }
+
+    def __str__(self) -> str:
+        return self.text
+
+
+class Message(MultiLangEnum):
+    """Localized application and UI messages."""
+
+    PROMPT = auto()
+    YES = auto()
+    NO = auto()
+
+    WELCOME = auto()
+    GOOD_BYE = auto()
+    HELP = auto()
+    COMMAND_SUGGESTION_CONFIRM = auto()
+    COMMAND_SUGGESTION_RUN = auto()
+
+    CONTACT_ADDED = auto()
+    CONTACT_UPDATED = auto()
+    CONTACT_FOUND = auto()
+    CONTACTS_FOUND = auto()
+    CONTACTS_LISTED = auto()
+    BIRTHDAYS_FOUND = auto()
+    NO_BIRTHDAYS = auto()
+    BIRTHDAY_LIST_ITEM = auto()
+
+    OPERATION_CANCELLED = auto()
+
+    CONFIRM_REMOVE_CONTACT = auto()
+    CONFIRM_REMOVE_ADDRESS = auto()
+    CONFIRM_REMOVE_BIRTHDAY = auto()
+    CONFIRM_REMOVE_NOTE = auto()
+    CONFIRM_REMOVE_PHONE = auto()
+    CONFIRM_REMOVE_EMAIL = auto()
+    CONFIRM_REMOVE_ALL_PHONES = auto()
+    CONFIRM_REMOVE_ALL_EMAILS = auto()
+    CONFIRM_SUFFIX = auto()
+    REMOVED_CONTACT = auto()
+    REMOVED_ADDRESS = auto()
+    REMOVED_BIRTHDAY = auto()
+    REMOVED_NOTE = auto()
+    REMOVED_PHONE = auto()
+    REMOVED_EMAIL = auto()
+
+    NO_CONTACTS = auto()
+    USE_QUOTES_HINT = auto()
+    BIRTHDAY_ONCE_HINT = auto()
+
+    CONTACT_NAME = auto()
+    CONTACT_PHONES = auto()
+    CONTACT_EMAILS = auto()
+    CONTACT_ADDRESS = auto()
+    CONTACT_BIRTHDAY = auto()
+    CONTACT_NOTE = auto()
+    CONTACT_TAGS = auto()
+
+    HELP_DESCRIPTION = auto()
+    EXIT_DESCRIPTION = auto()
+    ADD_DESCRIPTION = auto()
+    CONTACTS_DESCRIPTION = auto()
+    GET_DESCRIPTION = auto()
+    SEARCH_DESCRIPTION = auto()
+    SEARCH_NAME_DESCRIPTION = auto()
+    SEARCH_PHONE_DESCRIPTION = auto()
+    SEARCH_EMAIL_DESCRIPTION = auto()
+    SEARCH_NOTE_DESCRIPTION = auto()
+    SEARCH_TAG_DESCRIPTION = auto()
+    BIRTHDAYS_DESCRIPTION = auto()
+    SET_ADDRESS_DESCRIPTION = auto()
+    SET_BIRTHDAY_DESCRIPTION = auto()
+    ADD_PHONE_DESCRIPTION = auto()
+    ADD_EMAIL_DESCRIPTION = auto()
+    REMOVE_DESCRIPTION = auto()
+    REMOVE_ADDRESS_DESCRIPTION = auto()
+    REMOVE_BIRTHDAY_DESCRIPTION = auto()
+    REMOVE_PHONE_DESCRIPTION = auto()
+    REMOVE_EMAIL_DESCRIPTION = auto()
+    EDIT_NOTE_DESCRIPTION = auto()
+    REMOVE_NOTE_DESCRIPTION = auto()
+    ADD_TAG_DESCRIPTION = auto()
+    REMOVE_TAG_DESCRIPTION = auto()
+
+
+class ErrorCode(MultiLangEnum):
+    """Localized application error codes."""
+
+    UNKNOWN_INTERFACE_MODE = auto()
+    UNKNOWN_COMMAND = auto()
+    EMPTY_COMMAND = auto()
+    INVALID_COMMAND_SYNTAX = auto()
+    COMMAND_PARSE_ERROR = auto()
+
+    MISSING_ARGUMENTS = auto()
+    EXTRA_ARGUMENTS = auto()
+    INCORRECT_ARGUMENTS = auto()
+
+    VALIDATION_ERROR = auto()
+    CONTACT_NOT_FOUND = auto()
+    CONTACT_ALREADY_EXISTS = auto()
+    CONTACT_VALUE_NOT_FOUND = auto()
+    CONTACT_FIELD_EMPTY = auto()
+    INVALID_DAYS = auto()
+    NOT_IMPLEMENTED = auto()
+    UNEXPECTED_ERROR = auto()

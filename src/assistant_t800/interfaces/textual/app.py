@@ -1,5 +1,7 @@
 """Textual TUI application for the T800 assistant."""
 
+from pathlib import Path
+
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -11,6 +13,7 @@ from assistant_t800.ai.deps import AgentDeps
 from assistant_t800.interfaces.textual.presenter import TextualPresenter
 from assistant_t800.repositories.contacts import ContactsRepository
 from assistant_t800.services.contacts import ContactsService
+from assistant_t800.storage import AssistantStorage
 
 
 class AssistantApp(App):
@@ -68,6 +71,11 @@ class AssistantApp(App):
 
     _LOADER_FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
+    def __init__(self, contacts_repository: ContactsRepository) -> None:
+        """Initialize the application with shared contacts repository."""
+        super().__init__()
+        self._initial_repo = contacts_repository
+
     def compose(self) -> ComposeResult:
         """Build the application layout."""
         yield Header()
@@ -98,7 +106,7 @@ class AssistantApp(App):
         self._loader_frame = 0
         self._loader_timer = None
 
-        self._repo = ContactsRepository()
+        self._repo = self._initial_repo
         self._service = ContactsService(self._repo)
         self._presenter = TextualPresenter(self._display_log, self)
         self._deps = AgentDeps(
@@ -207,6 +215,8 @@ class AssistantApp(App):
             self._busy = False
 
 
-def run_textual() -> None:
+def run_textual(pickle_db: Path) -> None:
     """Run the Textual assistant application."""
-    AssistantApp().run()
+
+    with AssistantStorage(path=pickle_db) as repository:
+        AssistantApp(repository).run()

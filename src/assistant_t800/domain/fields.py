@@ -30,6 +30,7 @@ class Phone(Field):
     """Validated phone number with exactly 10 digits."""
 
     _PATTERN = re.compile(r"^\d{10}$")
+    _LOOKS_LIKE_PATTERN = re.compile(r"^\d+$")
 
     def __init__(self, value: str) -> None:
         normalized = (value or "").strip()
@@ -43,6 +44,13 @@ class Phone(Field):
     def is_valid(cls, value: str) -> bool:
         """Return ``True`` when the value is a valid phone number."""
         return isinstance(value, str) and bool(cls._PATTERN.fullmatch(value.strip()))
+
+    @classmethod
+    def looks_like(cls, value: str) -> bool:
+        """Return ``True`` when the value looks like a phone number."""
+        return isinstance(value, str) and bool(
+            cls._LOOKS_LIKE_PATTERN.fullmatch(value.strip())
+        )
 
 
 class Email(Field):
@@ -66,6 +74,12 @@ class Email(Field):
         """Return ``True`` when the value is a valid email address."""
         return isinstance(value, str) and bool(cls._PATTERN.fullmatch(value.strip()))
 
+    @staticmethod
+    def looks_like(value: str) -> bool:
+        """Return ``True`` when the value looks like an email address."""
+        normalized = value.strip() if isinstance(value, str) else ""
+        return "@" in normalized and " " not in normalized
+
 
 class Address(Field):
     """Validated non-empty physical address."""
@@ -83,11 +97,13 @@ class Birthday(Field):
     """Validated birthday in ``DD.MM.YYYY`` format."""
 
     DATE_FORMAT = "%d.%m.%Y"
+    INPUT_FORMATS = ("%d.%m.%Y", "%d-%m-%Y", "%d/%m/%Y")
+    _LOOKS_LIKE_PATTERN = re.compile(r"^\d{1,2}[./-]\d{1,2}[./-]\d{4}$")
 
     def __init__(self, value: str) -> None:
-        try:
-            parsed = datetime.strptime((value or "").strip(), self.DATE_FORMAT).date()
-        except (TypeError, ValueError):
+        parsed = self._parse(value)
+
+        if parsed is None:
             raise ValueError("Некоректний формат дати. Використовуйте DD.MM.YYYY")
 
         if parsed > date.today():
@@ -95,6 +111,36 @@ class Birthday(Field):
 
         super().__init__(parsed.strftime(self.DATE_FORMAT))
         self.date: date = parsed
+
+    @classmethod
+    def is_valid(cls, value: str) -> bool:
+        """Return ``True`` when the value is a valid birthday."""
+        parsed = cls._parse(value)
+        result = parsed is not None and parsed <= date.today()
+
+        return result
+
+    @classmethod
+    def looks_like(cls, value: str) -> bool:
+        """Return ``True`` when the value looks like a birthday date."""
+        return isinstance(value, str) and bool(
+            cls._LOOKS_LIKE_PATTERN.fullmatch(value.strip())
+        )
+
+    @classmethod
+    def _parse(cls, value: str) -> date | None:
+        """Parse a birthday from supported input formats."""
+        parsed: date | None = None
+        normalized = (value or "").strip()
+
+        for date_format in cls.INPUT_FORMATS:
+            try:
+                parsed = datetime.strptime(normalized, date_format).date()
+                break
+            except (TypeError, ValueError):
+                continue
+
+        return parsed
 
     def __str__(self) -> str:
         return self.date.strftime(self.DATE_FORMAT)

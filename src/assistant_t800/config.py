@@ -1,11 +1,6 @@
 """Application configuration management."""
 
-from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-# Export variables from `.env` into `os.environ` for third-party libraries
-# that access environment variables directly.
-load_dotenv()
 
 
 class Settings(BaseSettings):

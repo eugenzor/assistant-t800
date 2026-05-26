@@ -1,0 +1,1 @@
+"""Classic CLI interface package."""

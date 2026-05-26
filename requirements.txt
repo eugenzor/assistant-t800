@@ -4,3 +4,6 @@ textual>=0.80
 python-dotenv>=1.2.2
 # Application settings
 pydantic-settings>=2.0
+
+# CLI prompt UX
+prompt-toolkit>=3.0.52

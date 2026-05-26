@@ -1,25 +1,99 @@
 # Assistant T800
 
-AI-powered terminal assistant for contact management.
+Assistant T800 is a Python 3.13+ personal assistant for managing contacts from the terminal.
 
-Assistant T800 is a Python 3.13+ terminal application that combines a Textual-based TUI with AI-assisted contact handling. The current version focuses on managing contacts through a natural-language AI interface.
+The main interface is a classic CLI. The project also includes an optional Textual-based TUI with AI chat support.
 
 ---
 
-## Features
+## Current Features
 
-- AI-powered contact management
-- Modern terminal UI built with Textual
-- Contact storage with:
-  - names
+### Contact management
+
+- Add contacts with:
+  - name
   - phone numbers
   - email addresses
-  - birthdays
-  - physical addresses
-- Contact validation
-- Interactive AI chat interface
-- Gemini AI integration via `pydantic-ai`
-- Python 3.13+ support
+  - address
+  - birthday
+- Show all contacts.
+- Show one contact by name.
+- Search contacts by all fields or by a specific field.
+- Show upcoming birthdays with weekend congratulations moved to Monday.
+- Update address and birthday.
+- Add one or more phone numbers or email addresses.
+- Remove contacts and contact fields with confirmation.
+- Remove one, many, or all phone numbers / email addresses.
+
+### Search
+
+Implemented commands:
+
+- `search <query>`
+- `search-name <query>`
+- `search-phone <query>`
+- `search-email <query>`
+- `search-note <query>`
+- `search-tag <query>`
+
+Search is case-insensitive and supports partial matches.
+
+### Persistence
+
+Address book data is stored in:
+
+```text
+.data/address_book.pkl
+```
+
+CLI command history is stored in:
+
+```text
+.data/cli_commands_history
+```
+
+### CLI UX
+
+- Command history.
+- Command completion.
+- Fallback to standard `input()` if `prompt_toolkit` is unavailable.
+- Aliases in English and Ukrainian.
+- Long alias resolution, for example `знайди телефон Аліса` can resolve to `search-phone Аліса`.
+
+### AI suggestions
+
+If a command is unknown, the assistant can suggest a corrected command using:
+
+- fuzzy matching via `rapidfuzz`;
+- AI fallback via `pydantic-ai` and Gemini.
+
+Example:
+
+```bash
+видали Аліса
+```
+
+can be resolved to:
+
+```bash
+remove Аліса
+```
+
+### Optional TUI
+
+The Textual TUI is available as an additional AI-powered interface. It shares the same pickle storage file with the CLI.
+
+---
+
+## Planned Features
+
+These features are already prepared by the architecture but are not fully exposed through CLI commands yet:
+
+- `edit-note <name>` — interactive contact note editing.
+- `remove-note <name>` — clear the note attached to a contact.
+- `add-tag <name> <tag>` — add one or more tags.
+- `remove-tag <name> <tag>` — remove one or more tags.
+- Optional sorting or grouping by tags.
 
 ---
 
@@ -27,195 +101,217 @@ Assistant T800 is a Python 3.13+ terminal application that combines a Textual-ba
 
 - Python 3.13+
 - Git
-- Google Gemini API key
-
-`uv` is optional. The project can be installed and run with standard Python tools: `venv` and `pip`.
+- `uv` as the recommended environment and dependency manager
+- Google Gemini API key for AI suggestions and TUI AI mode
 
 ---
 
-## Installation
+## Installation with uv
 
-### 1. Clone the repository
+`uv` is the recommended way to run the project.
+
+### 1. Install uv
+
+Windows PowerShell:
+
+```powershell
+irm https://astral.sh/uv/install.ps1 | iex
+```
+
+Linux / macOS:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Restart the terminal after installation if the `uv` command is not available immediately.
+
+### 2. Clone the repository
 
 ```bash
 git clone <repo-url>
 cd assistant-t800
 ```
 
+### 3. Create the environment and install dependencies
+
+```bash
+uv sync
+```
+
+### 4. Configure environment variables
+
+Copy the example file:
+
+Windows CMD:
+
+```cmd
+copy .env.example .env
+```
+
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Linux / macOS:
+
+```bash
+cp .env.example .env
+```
+
+Set your Gemini API key:
+
+```env
+GOOGLE_API_KEY=AIza...your_key_here
+```
+
+Optional model override:
+
+```env
+GOOGLE_API_MODEL=google:gemini-3.1-flash-lite
+```
+
+### 5. Run the CLI
+
+```bash
+uv run assistant-t800
+```
+
+or:
+
+```bash
+uv run python main.py
+```
+
+### 6. Run the TUI
+
+```bash
+uv run assistant-t800 tui
+```
+
+or:
+
+```bash
+uv run assistant-t800 --enable-ai
+```
+
 ---
 
-## 2. Create and activate a virtual environment
+## Standard pip installation
 
-### Windows CMD
+Use this option if you do not want to use `uv`.
+
+### 1. Create and activate a virtual environment
+
+Windows CMD:
 
 ```cmd
 py -3.13 -m venv .venv
 .venv\Scripts\activate.bat
 ```
 
-### Windows PowerShell
+Windows PowerShell:
 
 ```powershell
 py -3.13 -m venv .venv
 .venv\Scripts\Activate.ps1
 ```
 
-If PowerShell blocks script execution, run:
-
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-Then activate the environment again.
-
-### Linux / macOS
+Linux / macOS:
 
 ```bash
 python3.13 -m venv .venv
 source .venv/bin/activate
 ```
 
----
+### 2. Install dependencies
 
-## 3. Install dependencies
-
-### Standard installation
+For the full project, including AI support:
 
 ```bash
 pip install -r requirements-ai.txt
 ```
 
-If you also need development tools:
+For development tools:
 
 ```bash
 pip install -r requirements-dev.txt
 ```
 
----
-
-## 4. Configure environment variables
-
-Copy the example configuration file:
-
-### Windows CMD
-
-```cmd
-copy .env.example .env
-```
-
-### Windows PowerShell
-
-```powershell
-Copy-Item .env.example .env
-```
-
-### Linux / macOS
-
-```bash
-cp .env.example .env
-```
-
-Open `.env` and replace `xxx` with your real Gemini API key:
-
-```env
-GOOGLE_API_KEY=AIza...your_key_here
-```
-
-Optionally, you may specify another AI model:
-
-```env
-ASSISTANT_T800_MODEL=google-gla:gemini-3.1-flash-lite
-```
-
----
-
-## Getting a Free Gemini API Key
-
-1. Open https://aistudio.google.com
-2. Sign in with your Google account.
-3. Accept the terms of service if prompted.
-4. Click **Get API key**.
-5. Select **Create API key** → **Create key in new project**.
-6. Copy the generated key. It usually starts with `AIza...`.
-
-> The free tier does not require a credit card and is sufficient for development and prototyping with Gemini Flash models.
-
----
-
-## Running the Application
-
-The project uses a `src` layout. If the package is not installed in editable mode, Python must know where the source directory is located.
-
-### Recommended option: install the package in editable mode
-
-Run once after installing dependencies:
+### 3. Install the package in editable mode
 
 ```bash
 pip install -e .
 ```
 
-Then start the application:
+### 4. Run
 
 ```bash
-assistant-t800 --enable-ai
+assistant-t800
 ```
 
 or:
 
 ```bash
-python main.py --enable-ai
+python main.py
 ```
 
 ---
 
-## Alternative: run with `PYTHONPATH`
+## Running with PYTHONPATH
 
-Use this option if you do not want to install the package in editable mode.
+If the package is not installed in editable mode, use `PYTHONPATH=src`.
 
-### Windows CMD
+Windows CMD:
 
 ```cmd
 set PYTHONPATH=src
-python main.py --enable-ai
+python main.py
 ```
 
-### Windows PowerShell
+Windows PowerShell:
 
 ```powershell
 $env:PYTHONPATH = "src"
-python main.py --enable-ai
+python main.py
 ```
 
-### Linux / macOS
+Linux / macOS:
 
 ```bash
-PYTHONPATH=src python main.py --enable-ai
+PYTHONPATH=src python main.py
 ```
 
 ---
 
-## Optional: Running with uv
-
-`uv` is not required, but it can simplify dependency and environment management.
-
-Install `uv` only if you want to use it:
+## Command Examples
 
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
+add "John Smith" 0991112233 john@example.com "New York" 25.05.1990
+contacts
+get "John Smith"
+search-phone 099
+birthdays
+birthdays 14
+add-phone "John Smith" 0992223344;0993334455
+remove-email "John Smith"
+remove "John Smith"
 ```
 
-Then run:
+Use quotes for values containing spaces.
 
-```bash
-uv sync
-uv run assistant-t800 --enable-ai
-```
+---
 
-or:
+## Getting a Gemini API Key
 
-```bash
-uv run python main.py --enable-ai
-```
+1. Open Google AI Studio.
+2. Sign in with your Google account.
+3. Create an API key.
+4. Add it to `.env` as `GOOGLE_API_KEY`.
+
+If both `GOOGLE_API_KEY` and `GEMINI_API_KEY` are set, the Google provider may print a warning and use `GOOGLE_API_KEY`. Prefer keeping only `GOOGLE_API_KEY` in this project.
 
 ---
 
@@ -224,45 +320,43 @@ uv run python main.py --enable-ai
 Install development dependencies:
 
 ```bash
-pip install -r requirements-dev.txt
+uv sync --group dev
 ```
 
-Run Ruff checks:
-
-```bash
-ruff check .
-```
-
-Format the codebase:
-
-```bash
-ruff format .
-```
-
-Run tests:
-
-```bash
-pytest
-```
-
-With `uv`, the same commands can be executed as:
+Run checks:
 
 ```bash
 uv run ruff check .
-uv run ruff format .
+uv run ruff format --check .
 uv run pytest
+```
+
+Format code:
+
+```bash
+uv run ruff format .
+```
+
+With pip:
+
+```bash
+pip install -r requirements-dev.txt
+ruff check .
+ruff format --check .
+pytest
 ```
 
 ---
 
 ## Tech Stack
 
-- Python 3.13
-- Textual
-- pydantic-ai
-- Google Gemini
-- pydantic-settings
-- python-dotenv
+- Python 3.13+
+- CLI with `prompt_toolkit`
+- Textual TUI
+- `pydantic-ai`
+- Google Gemini via `google-genai`
+- `python-dotenv`
+- pickle storage
 - Ruff
 - pytest
 
@@ -270,6 +364,16 @@ uv run pytest
 
 ## Project Status
 
-The project is currently focused on the AI-powered TUI workflow.
+The current baseline includes:
 
-Classic CLI mode and additional assistant features are planned for future development.
+- working CLI;
+- command aliases;
+- command history and completion;
+- contact management;
+- search;
+- birthdays;
+- pickle persistence;
+- AI suggestions;
+- optional TUI.
+
+The next planned area is contact-attached notes and tags editing commands.
