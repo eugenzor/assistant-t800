@@ -4,6 +4,7 @@ The module defines the ``Contact`` entity and delegates field validation
 to dedicated domain field types.
 """
 
+from datetime import datetime, timedelta
 from typing import Optional
 
 from assistant_t800.domain.fields import Address, Birthday, Email, Name, Phone
@@ -77,6 +78,38 @@ class Contact:
     def set_birthday(self, birthday: str) -> None:
         """Set or replace the contact birthday."""
         self.birthday = Birthday(birthday)
+
+    def upcoming_birthday(self, window: int = 7):
+        """Return greeting date for the next birthday within window days."""
+        birthday = self.birthday
+
+        if birthday is None:
+            return None
+
+        birthday_date = birthday.date
+        today = datetime.now().date()
+        end_date = today + timedelta(days=window)
+
+        birthday_this_year = birthday_date.replace(year=today.year)
+
+        # today is 2026-12-28, contact birthday is 1995-01-02, previous op gave us 2026-01-02
+        # and we would skip this when real upcoming birthday is 2027-01-02
+        if birthday_this_year < today:
+            birthday_this_year = birthday_date.replace(year=today.year + 1)
+
+        if not today <= birthday_this_year <= end_date:
+            return None
+
+        greeting_date = birthday_this_year
+
+        # if birthday is on Saturday or Sunday, move to the next Monday
+        # even if Monday is outside window, since birthday is still within the window
+        if greeting_date.weekday() == 5:  # Saturday
+            greeting_date += timedelta(days=2)
+        elif greeting_date.weekday() == 6:  # Sunday
+            greeting_date += timedelta(days=1)
+
+        return greeting_date
 
     def __str__(self) -> str:
         """Return a compact user-facing contact representation."""
