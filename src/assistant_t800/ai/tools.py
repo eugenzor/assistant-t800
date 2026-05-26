@@ -1,15 +1,32 @@
 """AI agent tool functions for contact management.
 
-Each tool receives ``RunContext[AgentDeps]`` and returns a short text
-message that the agent can use in the chat response. Tools map 1:1
-to methods on :class:`assistant_t800.services.contacts.ContactsService`.
+Each tool receives ``RunContext[AgentDeps]`` and returns a
+``ToolReturn`` with a short chat message and optional display metadata.
+Tools map 1:1 to methods on :class:`assistant_t800.services.contacts.ContactsService`.
 """
 
 from typing import Optional
 
 from pydantic_ai import RunContext
+from pydantic_ai.messages import ToolReturn
 
 from assistant_t800.ai.deps import AgentDeps
+from assistant_t800.ai.results import DisplayPayload
+
+
+def _ok(message: str, display: DisplayPayload | None = None) -> ToolReturn[str]:
+    """Build a successful tool return with optional display metadata."""
+    return ToolReturn(return_value=message, metadata=display)
+
+
+def _fail(message: str) -> ToolReturn[str]:
+    """Build a failed tool return without display metadata."""
+    return ToolReturn(return_value=message)
+
+
+def _contacts_display(contacts: list) -> DisplayPayload:
+    """Build a contacts display payload."""
+    return DisplayPayload(kind="contacts", contacts=contacts)
 
 
 def add_contact(
@@ -19,7 +36,7 @@ def add_contact(
     email: Optional[str] = None,
     address: Optional[str] = None,
     birthday: Optional[str] = None,
-) -> str:
+) -> ToolReturn[str]:
     """Create a new contact and refresh the UI contact list."""
     try:
         contact = ctx.deps.contacts_service.add_contact(
@@ -30,260 +47,305 @@ def add_contact(
             birthday=birthday,
         )
     except ValueError as exc:
-        return f"Не вдалося додати контакт: {exc}"
+        return _fail(f"Не вдалося додати контакт: {exc}")
 
-    ctx.deps.presenter.refresh_contacts(ctx.deps.contacts_service.list_contacts())
+    return _ok(
+        f"Контакт «{contact.name.value}» додано.",
+        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+    )
 
-    return f"Контакт «{contact.name.value}» додано."
 
-
-def get_contact(ctx: RunContext[AgentDeps], name: str) -> str:
+def get_contact(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
     """Look up a single contact by name and show it in the UI panel."""
     try:
         contact = ctx.deps.contacts_service.get_contact(name)
     except KeyError as exc:
-        return f"Контакт не знайдено: {exc}"
+        return _fail(f"Контакт не знайдено: {exc}")
 
-    ctx.deps.presenter.refresh_contacts([contact])
+    return _ok(
+        f"Контакт «{contact.name.value}» відображено.",
+        _contacts_display([contact]),
+    )
 
-    return f"Контакт «{contact.name.value}» відображено."
 
-
-def list_contacts(ctx: RunContext[AgentDeps]) -> str:
+def list_contacts(ctx: RunContext[AgentDeps]) -> ToolReturn[str]:
     """Display all stored contacts in the UI panel."""
     contacts = ctx.deps.contacts_service.list_contacts()
 
-    ctx.deps.presenter.refresh_contacts(contacts)
-
     if not contacts:
-        return "Контактів поки немає. Панель відображення порожня."
+        return _ok(
+            "Контактів поки немає. Панель відображення порожня.",
+            _contacts_display([]),
+        )
 
-    return f"У панелі відображення показано контактів: {len(contacts)}."
+    return _ok(
+        f"У панелі відображення показано контактів: {len(contacts)}.",
+        _contacts_display(contacts),
+    )
 
 
-def search_contacts(ctx: RunContext[AgentDeps], query: str) -> str:
+def search_contacts(ctx: RunContext[AgentDeps], query: str) -> ToolReturn[str]:
     """Search contacts across all searchable fields."""
     matches = ctx.deps.contacts_service.search_contacts(query)
 
-    ctx.deps.presenter.refresh_contacts(matches)
-
     if not matches:
-        return f"Жоден контакт не відповідає запиту «{query}»."
+        return _ok(
+            f"Жоден контакт не відповідає запиту «{query}».",
+            _contacts_display([]),
+        )
 
-    return f"Знайдено контактів за запитом «{query}»: {len(matches)}."
+    return _ok(
+        f"Знайдено контактів за запитом «{query}»: {len(matches)}.",
+        _contacts_display(matches),
+    )
 
 
-def search_contacts_by_name(ctx: RunContext[AgentDeps], query: str) -> str:
+def search_contacts_by_name(ctx: RunContext[AgentDeps], query: str) -> ToolReturn[str]:
     """Search contacts by name only."""
     matches = ctx.deps.contacts_service.search_contacts_by_name(query)
 
-    ctx.deps.presenter.refresh_contacts(matches)
-
     if not matches:
-        return f"Жоден контакт не відповідає імені «{query}»."
+        return _ok(
+            f"Жоден контакт не відповідає імені «{query}».",
+            _contacts_display([]),
+        )
 
-    return f"Знайдено контактів за іменем «{query}»: {len(matches)}."
+    return _ok(
+        f"Знайдено контактів за іменем «{query}»: {len(matches)}.",
+        _contacts_display(matches),
+    )
 
 
-def search_contacts_by_phone(ctx: RunContext[AgentDeps], query: str) -> str:
+def search_contacts_by_phone(ctx: RunContext[AgentDeps], query: str) -> ToolReturn[str]:
     """Search contacts by phone number only."""
     matches = ctx.deps.contacts_service.search_contacts_by_phone(query)
 
-    ctx.deps.presenter.refresh_contacts(matches)
-
     if not matches:
-        return f"Жоден контакт не відповідає телефону «{query}»."
+        return _ok(
+            f"Жоден контакт не відповідає телефону «{query}».",
+            _contacts_display([]),
+        )
 
-    return f"Знайдено контактів за телефоном «{query}»: {len(matches)}."
+    return _ok(
+        f"Знайдено контактів за телефоном «{query}»: {len(matches)}.",
+        _contacts_display(matches),
+    )
 
 
-def search_contacts_by_email(ctx: RunContext[AgentDeps], query: str) -> str:
+def search_contacts_by_email(ctx: RunContext[AgentDeps], query: str) -> ToolReturn[str]:
     """Search contacts by email only."""
     matches = ctx.deps.contacts_service.search_contacts_by_email(query)
 
-    ctx.deps.presenter.refresh_contacts(matches)
-
     if not matches:
-        return f"Жоден контакт не відповідає e-mail «{query}»."
+        return _ok(
+            f"Жоден контакт не відповідає e-mail «{query}».",
+            _contacts_display([]),
+        )
 
-    return f"Знайдено контактів за e-mail «{query}»: {len(matches)}."
+    return _ok(
+        f"Знайдено контактів за e-mail «{query}»: {len(matches)}.",
+        _contacts_display(matches),
+    )
 
 
-def search_contacts_by_note(ctx: RunContext[AgentDeps], query: str) -> str:
+def search_contacts_by_note(ctx: RunContext[AgentDeps], query: str) -> ToolReturn[str]:
     """Search contacts by note content only."""
     matches = ctx.deps.contacts_service.search_contacts_by_note(query)
 
-    ctx.deps.presenter.refresh_contacts(matches)
-
     if not matches:
-        return f"Жоден контакт не відповідає нотатці «{query}»."
+        return _ok(
+            f"Жоден контакт не відповідає нотатці «{query}».",
+            _contacts_display([]),
+        )
 
-    return f"Знайдено контактів за нотаткою «{query}»: {len(matches)}."
+    return _ok(
+        f"Знайдено контактів за нотаткою «{query}»: {len(matches)}.",
+        _contacts_display(matches),
+    )
 
 
-def search_contacts_by_tag(ctx: RunContext[AgentDeps], query: str) -> str:
+def search_contacts_by_tag(ctx: RunContext[AgentDeps], query: str) -> ToolReturn[str]:
     """Search contacts by tag only."""
     matches = ctx.deps.contacts_service.search_contacts_by_tag(query)
 
-    ctx.deps.presenter.refresh_contacts(matches)
-
     if not matches:
-        return f"Жоден контакт не відповідає тегу «{query}»."
+        return _ok(
+            f"Жоден контакт не відповідає тегу «{query}».",
+            _contacts_display([]),
+        )
 
-    return f"Знайдено контактів за тегом «{query}»: {len(matches)}."
+    return _ok(
+        f"Знайдено контактів за тегом «{query}»: {len(matches)}.",
+        _contacts_display(matches),
+    )
 
 
-def search_upcoming_birthdays(ctx: RunContext[AgentDeps], days: int = 7) -> str:
+def search_upcoming_birthdays(
+    ctx: RunContext[AgentDeps], days: int = 7
+) -> ToolReturn[str]:
     """List upcoming birthdays within the given number of days."""
     upcoming = ctx.deps.contacts_service.search_upcoming_birthdays(days)
 
     if not upcoming:
-        ctx.deps.presenter.print("Найближчих днів народження немає.")
-        return "Найближчих днів народження немає."
+        return _ok(
+            "Найближчих днів народження немає.",
+            DisplayPayload(kind="birthdays", birthdays=[]),
+        )
 
-    lines = [
-        f"{item.name} — {item.birthday} (вітати: {item.congratulation_date}, вік: {item.age})"
-        for item in upcoming
-    ]
-    ctx.deps.presenter.print("\n".join(lines))
-
-    return f"Найближчих днів народження: {len(upcoming)}."
+    return _ok(
+        f"Найближчих днів народження: {len(upcoming)}.",
+        DisplayPayload(kind="birthdays", birthdays=upcoming),
+    )
 
 
-def set_address(ctx: RunContext[AgentDeps], name: str, address: str) -> str:
+def set_address(ctx: RunContext[AgentDeps], name: str, address: str) -> ToolReturn[str]:
     """Set or update an existing contact address."""
     try:
         ctx.deps.contacts_service.set_address(name, address)
     except (KeyError, ValueError) as exc:
-        return f"Не вдалося встановити адресу: {exc}"
+        return _fail(f"Не вдалося встановити адресу: {exc}")
 
-    ctx.deps.presenter.refresh_contacts(ctx.deps.contacts_service.list_contacts())
+    return _ok(
+        f"Адресу контакту «{name}» оновлено.",
+        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+    )
 
-    return f"Адресу контакту «{name}» оновлено."
 
-
-def set_birthday(ctx: RunContext[AgentDeps], name: str, birthday: str) -> str:
+def set_birthday(
+    ctx: RunContext[AgentDeps], name: str, birthday: str
+) -> ToolReturn[str]:
     """Set or update an existing contact birthday (DD.MM.YYYY)."""
     try:
         ctx.deps.contacts_service.set_birthday(name, birthday)
     except (KeyError, ValueError) as exc:
-        return f"Не вдалося встановити день народження: {exc}"
+        return _fail(f"Не вдалося встановити день народження: {exc}")
 
-    ctx.deps.presenter.refresh_contacts(ctx.deps.contacts_service.list_contacts())
+    return _ok(
+        f"День народження контакту «{name}» оновлено.",
+        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+    )
 
-    return f"День народження контакту «{name}» оновлено."
 
-
-def add_phones(ctx: RunContext[AgentDeps], name: str, phones: list[str]) -> str:
+def add_phones(
+    ctx: RunContext[AgentDeps], name: str, phones: list[str]
+) -> ToolReturn[str]:
     """Add one or more phone numbers to an existing contact."""
     try:
         ctx.deps.contacts_service.add_phones(name, phones)
     except (KeyError, ValueError) as exc:
-        return f"Не вдалося додати телефони: {exc}"
+        return _fail(f"Не вдалося додати телефони: {exc}")
 
-    ctx.deps.presenter.refresh_contacts(ctx.deps.contacts_service.list_contacts())
+    return _ok(
+        f"Телефони додано до контакту «{name}»: {len(phones)}.",
+        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+    )
 
-    return f"Телефони додано до контакту «{name}»: {len(phones)}."
 
-
-def add_emails(ctx: RunContext[AgentDeps], name: str, emails: list[str]) -> str:
+def add_emails(
+    ctx: RunContext[AgentDeps], name: str, emails: list[str]
+) -> ToolReturn[str]:
     """Add one or more email addresses to an existing contact."""
     try:
         ctx.deps.contacts_service.add_emails(name, emails)
     except (KeyError, ValueError) as exc:
-        return f"Не вдалося додати e-mail: {exc}"
+        return _fail(f"Не вдалося додати e-mail: {exc}")
 
-    ctx.deps.presenter.refresh_contacts(ctx.deps.contacts_service.list_contacts())
+    return _ok(
+        f"E-mail додано до контакту «{name}»: {len(emails)}.",
+        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+    )
 
-    return f"E-mail додано до контакту «{name}»: {len(emails)}."
 
-
-def remove_contact(ctx: RunContext[AgentDeps], name: str) -> str:
+def remove_contact(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
     """Remove a contact from storage."""
     try:
         ctx.deps.contacts_service.remove_contact(name)
     except (KeyError, ValueError) as exc:
-        return f"Не вдалося видалити контакт: {exc}"
+        return _fail(f"Не вдалося видалити контакт: {exc}")
 
-    ctx.deps.presenter.refresh_contacts(ctx.deps.contacts_service.list_contacts())
+    return _ok(
+        f"Контакт «{name}» видалено.",
+        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+    )
 
-    return f"Контакт «{name}» видалено."
 
-
-def remove_address(ctx: RunContext[AgentDeps], name: str) -> str:
+def remove_address(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
     """Remove the address from an existing contact."""
     try:
         ctx.deps.contacts_service.remove_address(name)
     except (KeyError, ValueError) as exc:
-        return f"Не вдалося видалити адресу: {exc}"
+        return _fail(f"Не вдалося видалити адресу: {exc}")
 
-    ctx.deps.presenter.refresh_contacts(ctx.deps.contacts_service.list_contacts())
+    return _ok(
+        f"Адресу контакту «{name}» видалено.",
+        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+    )
 
-    return f"Адресу контакту «{name}» видалено."
 
-
-def remove_birthday(ctx: RunContext[AgentDeps], name: str) -> str:
+def remove_birthday(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
     """Remove the birthday from an existing contact."""
     try:
         ctx.deps.contacts_service.remove_birthday(name)
     except (KeyError, ValueError) as exc:
-        return f"Не вдалося видалити день народження: {exc}"
+        return _fail(f"Не вдалося видалити день народження: {exc}")
 
-    ctx.deps.presenter.refresh_contacts(ctx.deps.contacts_service.list_contacts())
+    return _ok(
+        f"День народження контакту «{name}» видалено.",
+        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+    )
 
-    return f"День народження контакту «{name}» видалено."
 
-
-def remove_phones(ctx: RunContext[AgentDeps], name: str, phones: list[str]) -> str:
+def remove_phones(
+    ctx: RunContext[AgentDeps], name: str, phones: list[str]
+) -> ToolReturn[str]:
     """Remove one or more phone numbers from an existing contact."""
     try:
         ctx.deps.contacts_service.remove_phones(name, phones)
     except (KeyError, ValueError) as exc:
-        return f"Не вдалося видалити телефони: {exc}"
+        return _fail(f"Не вдалося видалити телефони: {exc}")
 
-    ctx.deps.presenter.refresh_contacts(ctx.deps.contacts_service.list_contacts())
+    return _ok(
+        f"Телефони видалено у контакту «{name}»: {len(phones)}.",
+        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+    )
 
-    return f"Телефони видалено у контакту «{name}»: {len(phones)}."
 
-
-def remove_all_phones(ctx: RunContext[AgentDeps], name: str) -> str:
+def remove_all_phones(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
     """Remove every phone number from an existing contact."""
     try:
         ctx.deps.contacts_service.remove_all_phones(name)
     except (KeyError, ValueError) as exc:
-        return f"Не вдалося видалити телефони: {exc}"
+        return _fail(f"Не вдалося видалити телефони: {exc}")
 
-    ctx.deps.presenter.refresh_contacts(ctx.deps.contacts_service.list_contacts())
+    return _ok(
+        f"Усі телефони контакту «{name}» видалено.",
+        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+    )
 
-    return f"Усі телефони контакту «{name}» видалено."
 
-
-def remove_emails(ctx: RunContext[AgentDeps], name: str, emails: list[str]) -> str:
+def remove_emails(
+    ctx: RunContext[AgentDeps], name: str, emails: list[str]
+) -> ToolReturn[str]:
     """Remove one or more email addresses from an existing contact."""
     try:
         ctx.deps.contacts_service.remove_emails(name, emails)
     except (KeyError, ValueError) as exc:
-        return f"Не вдалося видалити e-mail: {exc}"
+        return _fail(f"Не вдалося видалити e-mail: {exc}")
 
-    ctx.deps.presenter.refresh_contacts(ctx.deps.contacts_service.list_contacts())
+    return _ok(
+        f"E-mail видалено у контакту «{name}»: {len(emails)}.",
+        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+    )
 
-    return f"E-mail видалено у контакту «{name}»: {len(emails)}."
 
-
-def remove_all_emails(ctx: RunContext[AgentDeps], name: str) -> str:
+def remove_all_emails(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
     """Remove every email address from an existing contact."""
     try:
         ctx.deps.contacts_service.remove_all_emails(name)
     except (KeyError, ValueError) as exc:
-        return f"Не вдалося видалити e-mail: {exc}"
+        return _fail(f"Не вдалося видалити e-mail: {exc}")
 
-    ctx.deps.presenter.refresh_contacts(ctx.deps.contacts_service.list_contacts())
-
-    return f"Усі e-mail контакту «{name}» видалено."
-
-
-def print_to_display(ctx: RunContext[AgentDeps], text: str) -> str:
-    """Display arbitrary text in the UI output panel."""
-    ctx.deps.presenter.print(text)
-
-    return "Текст виведено у панель відображення."
+    return _ok(
+        f"Усі e-mail контакту «{name}» видалено.",
+        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+    )

@@ -5,6 +5,7 @@ from typing import Protocol
 
 from pydantic_ai.messages import ModelMessage
 
+from assistant_t800.domain.birthdays import BirthdaysListContact
 from assistant_t800.domain.contacts import Contact
 from assistant_t800.services.contacts import ContactsService
 
@@ -14,6 +15,10 @@ class Presenter(Protocol):
 
     def refresh_contacts(self, contacts: list[Contact]) -> None:
         """Refresh the contact list display."""
+        ...
+
+    def refresh_birthdays(self, birthdays: list[BirthdaysListContact]) -> None:
+        """Refresh the upcoming birthdays display."""
         ...
 
     def print(self, text: str) -> None:

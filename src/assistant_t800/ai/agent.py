@@ -10,6 +10,8 @@ from functools import lru_cache
 from pydantic_ai import Agent
 
 from assistant_t800.ai.deps import AgentDeps
+from assistant_t800.ai.display import apply_display, extract_display_payloads
+from assistant_t800.ai.history import cap_message_history, strip_display_metadata
 from assistant_t800.config import settings
 from assistant_t800.ai.tools import (
     add_contact,
@@ -17,7 +19,6 @@ from assistant_t800.ai.tools import (
     add_phones,
     get_contact,
     list_contacts,
-    print_to_display,
     remove_address,
     remove_all_emails,
     remove_all_phones,
@@ -72,14 +73,12 @@ SYSTEM_PROMPT = """\
 - перегляду найближчих днів народження.
 
 Правила роботи:
-1. Якщо користувач просить показати контакти, завжди викликай `list_contacts`, щоб
-оновити панель відображення.
-2. Якщо потрібно показати довільну інформацію у лівій панелі — нотатки, підсумки,
-пояснення або результати аналізу — використовуй `print_to_display`.
-3. Після виконання дії коротко підтверджуй результат у чаті.
-4. Якщо даних недостатньо для виконання команди, коротко запитай лише те, чого бракує.
-5. Перед додаванням або редагуванням перевіряй формат телефону та дати народження.
-6. Якщо телефон має не 10 цифр або дата народження не відповідає формату DD.MM.YYYY,
+1. Панель відображення оновлюється автоматично після виконання інструментів — не потрібно
+окремо викликати інструменти лише для оновлення панелі.
+2. Після виконання дії коротко підтверджуй результат у чаті.
+3. Якщо даних недостатньо для виконання команди, коротко запитай лише те, чого бракує.
+4. Перед додаванням або редагуванням перевіряй формат телефону та дати народження.
+5. Якщо телефон має не 10 цифр або дата народження не відповідає формату DD.MM.YYYY,
 повідом користувача про помилку і попроси виправити дані.
 
 Приклади стилю відповідей:
@@ -127,7 +126,6 @@ def _get_agent() -> Agent[AgentDeps, str]:
     agent.tool(remove_all_phones)
     agent.tool(remove_emails)
     agent.tool(remove_all_emails)
-    agent.tool(print_to_display)
     return agent
 
 
@@ -150,9 +148,11 @@ def run_chat(message: str, deps: AgentDeps) -> str:
         message_history=deps.message_history,
     )
 
+    apply_display(deps.presenter, extract_display_payloads(result.new_messages()))
+
     max_messages = settings.max_history_messages
-    deps.message_history = (
-        list(result.all_messages())[-max_messages:] if max_messages > 0 else []
+    deps.message_history = strip_display_metadata(
+        cap_message_history(list(result.all_messages()), max_messages)
     )
 
     return result.output
