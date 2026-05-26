@@ -10,6 +10,7 @@ from functools import lru_cache
 from pydantic_ai import Agent
 
 from assistant_t800.ai.deps import AgentDeps
+from assistant_t800.config import settings
 from assistant_t800.ai.tools import (
     add_contact,
     add_emails,
@@ -133,6 +134,9 @@ def _get_agent() -> Agent[AgentDeps, str]:
 def run_chat(message: str, deps: AgentDeps) -> str:
     """Send a synchronous message to the AI agent.
 
+    Replays ``deps.message_history`` so the agent has context from prior turns,
+    then stores the updated, capped history back on ``deps`` for the next call.
+
     Args:
         message: User message for the agent.
         deps: Runtime dependencies container.
@@ -140,6 +144,15 @@ def run_chat(message: str, deps: AgentDeps) -> str:
     Returns:
         Agent response text.
     """
-    result = _get_agent().run_sync(message, deps=deps)
+    result = _get_agent().run_sync(
+        message,
+        deps=deps,
+        message_history=deps.message_history,
+    )
+
+    max_messages = settings.max_history_messages
+    deps.message_history = (
+        list(result.all_messages())[-max_messages:] if max_messages > 0 else []
+    )
 
     return result.output

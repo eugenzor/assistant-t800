@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     """
     Application settings loaded from environment variables and `.env`.
     ``assistant_t800_model`` -> ``ASSISTANT_T800_MODEL``
+    ``max_history_messages`` -> ``ASSISTANT_T800_MAX_HISTORY_MESSAGES``
     """
 
     model_config = SettingsConfigDict(
@@ -17,6 +18,7 @@ class Settings(BaseSettings):
     )
 
     assistant_t800_model: str = "google-gla:gemini-3.1-flash-lite"
+    max_history_messages: int = 10
 
 
 settings = Settings()
