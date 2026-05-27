@@ -123,8 +123,8 @@ AppResult.confirm(Message.CONFIRM_REMOVE_CONTACT, name=name)
 Для запланованого функціоналу використовуйте:
 
 ```python
-def edit_note(context: AppContext) -> AppResult:
-    """Edit contact note."""
+def add_tag(context: AppContext) -> AppResult:
+    """Add contact tag."""
     return AppResult.fail(ErrorCode.NOT_IMPLEMENTED)
 ```
 

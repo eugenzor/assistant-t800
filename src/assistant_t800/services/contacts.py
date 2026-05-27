@@ -119,6 +119,20 @@ class ContactsService:
 
         return contact
 
+    def set_note(self, name: str, note: str) -> Contact:
+        """Set or replace a contact note."""
+        contact = self.get_contact(name)
+        contact.set_note(note)
+
+        return contact
+
+    def remove_note(self, name: str) -> Contact:
+        """Remove a contact note."""
+        contact = self.get_contact(name)
+        contact.clear_note()
+
+        return contact
+
     def remove_contact(self, name: str) -> Contact:
         """Remove a contact from storage."""
         return self._repo.remove(name)

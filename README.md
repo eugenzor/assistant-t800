@@ -22,6 +22,7 @@ The main interface is a classic CLI. The project also includes an optional Textu
 - Show upcoming birthdays with weekend congratulations moved to Monday.
 - Update address and birthday.
 - Add one or more phone numbers or email addresses.
+- Edit and remove contact notes.
 - Remove contacts and contact fields with confirmation.
 - Remove one, many, or all phone numbers / email addresses.
 
@@ -89,8 +90,6 @@ The Textual TUI is available as an additional AI-powered interface. It shares th
 
 These features are already prepared by the architecture but are not fully exposed through CLI commands yet:
 
-- `edit-note <name>` — interactive contact note editing.
-- `remove-note <name>` — clear the note attached to a contact.
 - `add-tag <name> <tag>` — add one or more tags.
 - `remove-tag <name> <tag>` — remove one or more tags.
 - Optional sorting or grouping by tags.
@@ -296,6 +295,8 @@ search-phone 099
 birthdays
 birthdays 14
 add-phone "John Smith" 0992223344;0993334455
+edit-note "John Smith" "Call after demo"
+remove-note "John Smith"
 remove-email "John Smith"
 remove "John Smith"
 ```
@@ -417,4 +418,4 @@ The current baseline includes:
 - AI suggestions;
 - optional TUI.
 
-The next planned area is contact-attached notes and tags editing commands.
+The next planned area is contact-attached tag editing commands.

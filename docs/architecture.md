@@ -304,12 +304,10 @@ CONTACT_NOT_FOUND = Контакт «{name}» не знайдено.
 
 Найближчі логічні кроки:
 
-1. Додати `edit-note <name>`.
-2. Додати `remove-note <name>`.
-3. Додати `add-tag <name> <tag>`.
-4. Додати `remove-tag <name> <tag>`.
-5. Додати тести для application layer та CLI-сценаріїв.
-6. За потреби розширити TUI так, щоб він також викликав спільний command layer.
+1. Додати `add-tag <name> <tag>`.
+2. Додати `remove-tag <name> <tag>`.
+3. Додати тести для CLI-сценаріїв.
+4. За потреби розширити TUI так, щоб він також викликав спільний command layer.
 
 ---
 

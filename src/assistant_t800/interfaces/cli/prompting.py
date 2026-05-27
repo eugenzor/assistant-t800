@@ -130,6 +130,44 @@ class InputFactory:
 
         return result
 
+    def create_note_input(self) -> Callable[[str, str], str]:
+        """Create note input function."""
+        import sys
+
+        # prompt_toolkit needs an interactive terminal.
+        if not sys.stdin.isatty():
+            # fallback function to use simple input(), second argument for return type compatibility
+            def fallback_note_input(prompt: str, default: str) -> str:
+                return input(prompt)
+
+            return fallback_note_input
+
+        try:
+            # prevent selector event loop on Windows
+            self._patch_windows_asyncio()
+
+            from prompt_toolkit import PromptSession
+
+            session = PromptSession()
+
+            def note_input(prompt: str, default: str) -> str:
+                return session.prompt(prompt, default=default)
+
+            return note_input
+
+        except (ImportError, OSError, Exception) as error:
+            if not self.fallback_to_input:
+                raise
+
+            if self.show_fallback_reason:
+                print(f"Prompt toolkit note input disabled: {error}")
+
+            # fall back to simple input without prompt_toolkit
+            def fallback_note_input(prompt: str, default: str) -> str:
+                return input(prompt)
+
+            return fallback_note_input
+
     @staticmethod
     def _patch_windows_asyncio() -> None:
         """Use selector event loop on Windows for prompt_toolkit stability."""
