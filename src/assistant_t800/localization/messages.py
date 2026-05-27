@@ -1,8 +1,13 @@
 """Localized message enums."""
 
 from enum import auto, Enum
-
+from importlib.metadata import PackageNotFoundError, version
 from assistant_t800.localization.multilang import MultiLang
+
+try:
+    APP_VERSION = version("assistant-t800")
+except PackageNotFoundError:
+    APP_VERSION = "1.0.0"
 
 
 class MultiLangEnum(Enum):
@@ -42,6 +47,13 @@ class Message(MultiLangEnum):
     NO = auto()
 
     WELCOME = auto()
+    WELCOME_TITLE = auto()
+    WELCOME_SUBTITLE = auto()
+    WELCOME_HINTS_TITLE = auto()
+    WELCOME_QUOTES_HINT = auto()
+    WELCOME_MULTI_VALUE_HINT = auto()
+    WELCOME_REMOVE_HINT = auto()
+    WELCOME_HELP_HINT = auto()
     GOOD_BYE = auto()
     HELP = auto()
     COMMAND_SUGGESTION_CONFIRM = auto()

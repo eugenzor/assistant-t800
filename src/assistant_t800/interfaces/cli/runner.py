@@ -3,9 +3,9 @@
 from collections.abc import Callable
 
 from assistant_t800.application.dispatcher import CommandDispatcher
-from assistant_t800.application.results import AppMessage, AppResult
+from assistant_t800.application.results import AppResult
 from assistant_t800.interfaces.cli.presenter import CliPresenter
-from assistant_t800.localization import ErrorCode, Message, render_message
+from assistant_t800.localization import ErrorCode, Message
 from assistant_t800.suggestions import SuggestionService
 
 InputFunc = Callable[[str], str]
@@ -50,19 +50,17 @@ class CliRunner:
 
     def run(self) -> None:
         """Run the command processing loop."""
-        self._output_func(render_message(AppMessage(Message.WELCOME)))
+        self.presenter.display_welcome()
 
         try:
             while True:
                 result = self._dispatch_input()
-
-                if output := self.presenter.render(result):
-                    self._output_func(output)
+                self.presenter.display(result)
 
                 if result.should_exit:
                     break
         except (KeyboardInterrupt, EOFError):
-            self._output_func("\n" + render_message(AppMessage(Message.GOOD_BYE)))
+            self.presenter.display_goodbye()
 
     def _dispatch_input(self) -> AppResult:
         """Read, resolve, dispatch, and optionally confirm one input line."""

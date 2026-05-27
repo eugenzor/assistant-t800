@@ -1,9 +1,15 @@
-# TUI
-textual>=0.80
 # Environment management
 python-dotenv>=1.2.2
+wcwidth==0.7.0
+rapidfuzz>=3.0
 # Application settings
 pydantic-settings>=2.0
 
 # CLI prompt UX
 prompt-toolkit>=3.0.52
+
+# Optional enhanced CLI rendering
+rich>=13.7
+
+# Optional TUI
+textual>=0.80
