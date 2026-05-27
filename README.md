@@ -346,6 +346,47 @@ ruff format --check .
 pytest
 ```
 
+### Running unit tests
+
+Run the full test suite:
+
+```bash
+uv run pytest
+```
+
+Run with verbose output:
+
+```bash
+uv run pytest -v
+```
+
+Run only the AI tools tests:
+
+```bash
+uv run pytest tests/test_ai_tools.py
+```
+
+Run a specific test by name:
+
+```bash
+uv run pytest -k "test_add_contact"
+```
+
+Run with coverage report:
+
+```bash
+uv run pytest --cov=src/assistant_t800 --cov-report=term-missing
+```
+
+With pip (activate the virtual environment first):
+
+```bash
+pytest
+pytest -v
+pytest tests/test_ai_tools.py
+pytest --cov=src/assistant_t800 --cov-report=term-missing
+```
+
 ---
 
 ## Tech Stack

@@ -2,7 +2,9 @@
 
 from textual.widgets import RichLog
 
+from assistant_t800.domain.birthdays import BirthdaysListContact
 from assistant_t800.domain.contacts import Contact
+from assistant_t800.localization import Message
 
 
 class TextualPresenter:
@@ -17,6 +19,10 @@ class TextualPresenter:
         """Render contacts in the display panel."""
         # Tool calls may run from a worker thread, so UI updates must be proxied.
         self._app.call_from_thread(self._render_contacts, contacts)
+
+    def refresh_birthdays(self, birthdays: list[BirthdaysListContact]) -> None:
+        """Render upcoming birthdays in the display panel."""
+        self._app.call_from_thread(self._render_birthdays, birthdays)
 
     def print(self, text: str) -> None:
         """Render arbitrary text in the display panel."""
@@ -48,6 +54,24 @@ class TextualPresenter:
 
             if contact.birthday is not None:
                 self._log.write(f"   день народження: {contact.birthday}")
+
+    def _render_birthdays(self, birthdays: list[BirthdaysListContact]) -> None:
+        """Render upcoming birthdays into the display log."""
+        self._log.clear()
+
+        if not birthdays:
+            self._log.write("[dim]Найближчих днів народження немає.[/dim]")
+            return
+
+        for item in birthdays:
+            self._log.write(
+                Message.BIRTHDAY_LIST_ITEM.render(
+                    name=item.name,
+                    birthday=item.birthday,
+                    age=item.age,
+                    congratulation_date=item.congratulation_date,
+                )
+            )
 
     def _render_text(self, text: str) -> None:
         """Replace display panel content with arbitrary text."""
