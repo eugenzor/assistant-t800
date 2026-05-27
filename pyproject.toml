@@ -1,6 +1,6 @@
 [project]
 name = "assistant-t800"
-version = "0.1.0"
+version = "1.0.0"
 description = "CLI and AI-powered personal assistant for contact management."
 readme = "README.md"
 authors = [

@@ -6,7 +6,7 @@ from pathlib import Path
 from assistant_t800.application.context import AppContext
 from assistant_t800.application.dispatcher import CommandDispatcher
 from assistant_t800.interfaces.cli.commands import build_registry
-from assistant_t800.interfaces.cli.presenter import CliPresenter
+from assistant_t800.interfaces.cli.presenter_factory import create_cli_presenter
 from assistant_t800.interfaces.cli.prompting import InputFactory
 from assistant_t800.interfaces.cli.runner import CliRunner
 from assistant_t800.repositories.contacts import ContactsRepository
@@ -50,7 +50,7 @@ def _build_cli_runner(repository: ContactsRepository) -> CliRunner:
         registry=registry,
     )
     dispatcher = CommandDispatcher(context)
-    presenter = CliPresenter()
+    presenter = create_cli_presenter()
 
     CLI_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
     input_func = InputFactory(

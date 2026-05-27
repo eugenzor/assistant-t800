@@ -23,7 +23,11 @@ class MultiLang:
         config = cls._load(language)
         section = source.__class__.__name__
         key = source.name
-        result = cls._get_value(config, section, key)
+        result = (
+            cls._get_value(config, section, key)
+            .replace(r"\n", "\n")
+            .replace(r"\t", "    ")
+        )
 
         return result
 
@@ -59,6 +63,7 @@ class MultiLang:
             if platform.startswith("win")
             else cls._detect_posix_language()
         )
+
         result = (
             detected
             if (cls.LOCALE_DIR / f"{detected}.ini").is_file()

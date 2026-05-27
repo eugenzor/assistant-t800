@@ -1,8 +1,11 @@
 """CLI result presenter."""
 
+import os
+from textwrap import dedent
+
 from assistant_t800.application.commands import Command
 from assistant_t800.application.enums import SystemValue
-from assistant_t800.application.results import AppResult
+from assistant_t800.application.results import AppMessage, AppResult
 from assistant_t800.domain.birthdays import BirthdaysListContact
 from assistant_t800.domain.contacts import Contact
 from assistant_t800.localization import Message, render_message
@@ -10,6 +13,59 @@ from assistant_t800.localization import Message, render_message
 
 class CliPresenter:
     """Render application results for terminal output."""
+
+    def __init__(self, output_func=print) -> None:
+        self._output_func = output_func
+
+    def display_welcome(self) -> None:
+        """Display the welcome screen."""
+        if output := self.render_welcome():
+            self.clear()
+            self._output_func(output)
+
+    def display_goodbye(self) -> None:
+        """Display the goodbye message."""
+        self._output_func("\n" + render_message(AppMessage(Message.GOOD_BYE)))
+
+    def display(self, result: AppResult) -> None:
+        """Display one application result."""
+        if output := self.render(result):
+            self._output_func(output)
+
+    @classmethod
+    def render_header(cls) -> str:
+        """Render the header."""
+        cls.clear()
+        result = dedent(
+            f"""
+                    ╭────────────────────────────────────────────────────────────╮
+                    │  {Message.WELCOME_TITLE:<58}│
+                    │  {Message.WELCOME_SUBTITLE:<58}│
+                    ╰────────────────────────────────────────────────────────────╯
+
+                    """
+        ).strip()
+
+        return result
+
+    @classmethod
+    def render_welcome(cls) -> str:
+        """Render the welcome screen."""
+        result = cls.render_header()
+        result += dedent(
+            f"""
+            {Message.WELCOME_HINTS_TITLE}:
+              • {Message.WELCOME_QUOTES_HINT}
+                add "John Smith" 0991112233 "New York"
+              • {Message.WELCOME_MULTI_VALUE_HINT}
+                add-phone John 0991112233;0992223344
+              • {Message.WELCOME_REMOVE_HINT}
+              • {Message.WELCOME_HELP_HINT}
+    
+            """
+        ).strip()
+
+        return result
 
     def render(self, result: AppResult) -> str:
         """Render one application result."""
@@ -122,3 +178,7 @@ class CliPresenter:
         )
 
         return result
+
+    def clear(self) -> None:
+        """Clear terminal screen."""
+        os.system("cls||clear")
