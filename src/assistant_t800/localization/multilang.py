@@ -61,6 +61,7 @@ class MultiLang:
             if platform.startswith("win")
             else cls._detect_posix_language()
         )
+
         result = (
             detected
             if (cls.LOCALE_DIR / f"{detected}.ini").is_file()

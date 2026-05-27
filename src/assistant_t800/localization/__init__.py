@@ -4,7 +4,7 @@ from assistant_t800.localization.messages import (
     APP_VERSION,
     MultiLangEnum,
     ErrorCode,
-    Message
+    Message,
 )
 from assistant_t800.localization.multilang import MultiLang, render_message
 
