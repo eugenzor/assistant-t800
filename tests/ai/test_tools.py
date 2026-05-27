@@ -285,6 +285,76 @@ def test_set_birthday_missing_contact_leaves_state_untouched(ctx, service):
     assert service.list_contacts() == []
 
 
+# ---------- set_note ----------
+
+
+def test_set_note_updates_value(ctx, service, presenter):
+    tools.add_contact(ctx, "Іван")
+
+    result = tools.set_note(ctx, "Іван", "важливий клієнт")
+
+    assert service.get_contact("Іван").note == "важливий клієнт"
+    assert presenter.refresh_calls == []
+    assert [c.name.value for c in _contacts(result)] == ["Іван"]
+
+
+def test_set_note_replaces_existing_note(ctx, service):
+    tools.add_contact(ctx, "Іван")
+    tools.set_note(ctx, "Іван", "first")
+
+    tools.set_note(ctx, "Іван", "second")
+
+    assert service.get_contact("Іван").note == "second"
+
+
+def test_set_note_missing_contact_leaves_state_untouched(ctx, service, presenter):
+    result = tools.set_note(ctx, "Невідомий", "нотатка")
+
+    assert service.list_contacts() == [], (
+        "missing-contact errors must not create a placeholder contact"
+    )
+    assert presenter.refresh_calls == []
+    assert result.metadata is None
+
+
+def test_set_note_empty_value_is_rejected(ctx, service, presenter):
+    from assistant_t800.application.enums import SystemValue
+
+    tools.add_contact(ctx, "Іван")
+
+    result = tools.set_note(ctx, "Іван", "   ")
+
+    assert service.get_contact("Іван").note == SystemValue.EMPTY_TEXT.value, (
+        "whitespace-only note must be rejected and leave the field unset"
+    )
+    assert presenter.refresh_calls == []
+    assert result.metadata is None
+
+
+# ---------- remove_note ----------
+
+
+def test_remove_note_clears_value(ctx, service, presenter):
+    from assistant_t800.application.enums import SystemValue
+
+    tools.add_contact(ctx, "Іван")
+    tools.set_note(ctx, "Іван", "важливий клієнт")
+
+    result = tools.remove_note(ctx, "Іван")
+
+    assert service.get_contact("Іван").note == SystemValue.EMPTY_TEXT.value
+    assert presenter.refresh_calls == []
+    assert [c.name.value for c in _contacts(result)] == ["Іван"]
+
+
+def test_remove_note_missing_contact_leaves_state_untouched(ctx, service, presenter):
+    result = tools.remove_note(ctx, "Невідомий")
+
+    assert service.list_contacts() == []
+    assert presenter.refresh_calls == []
+    assert result.metadata is None
+
+
 # ---------- add_phones ----------
 
 
