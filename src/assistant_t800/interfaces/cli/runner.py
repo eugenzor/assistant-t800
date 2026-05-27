@@ -1,4 +1,5 @@
 """Classic CLI input loop."""
+
 import shlex
 from collections.abc import Callable
 
