@@ -274,7 +274,8 @@ def build_registry() -> dict[str, Command]:
             name="edit-note",
             handler=edit_note,
             description=Message.EDIT_NOTE_DESCRIPTION,
-            args=("name",),
+            usage="edit-note <name> <note>",
+            parse_args=False,
             aliases=(
                 "увше-тщеу",
                 "edit note",

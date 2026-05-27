@@ -129,13 +129,50 @@ def list_upcoming_birthdays(context: AppContext) -> AppResult:
 
 
 def edit_note(context: AppContext) -> AppResult:
-    """Return placeholder for future interactive note editing."""
-    return AppResult.fail(ErrorCode.NOT_IMPLEMENTED)
+    """Set or replace a contact note."""
+    parsed = ContactArgumentsParser.parse_named_value(
+        context.raw_args,
+        command="edit-note",
+        value_name="note",
+    )
+
+    if isinstance(parsed, AppResult):
+        result = parsed
+    else:
+        name, note = parsed
+        if not note.strip():
+            result = AppResult.fail(
+                ErrorCode.VALIDATION_ERROR,
+                reason="Note cannot be empty.",
+            )
+        else:
+            try:
+                contact = context.contacts.set_note(name, note)
+                result = AppResult.ok(
+                    Message.CONTACT_UPDATED,
+                    data=contact,
+                    name=contact.name.value,
+                    field="note",
+                )
+            except KeyError:
+                result = AppResult.fail(ErrorCode.CONTACT_NOT_FOUND, name=name)
+            except ValueError as error:
+                result = AppResult.fail(
+                    ErrorCode.VALIDATION_ERROR,
+                    reason=str(error),
+                )
+
+    return result
 
 
 def remove_note(context: AppContext) -> AppResult:
-    """Return placeholder for future note removal."""
-    return AppResult.fail(ErrorCode.NOT_IMPLEMENTED)
+    """Remove contact note after confirmation."""
+    return _remove_field(
+        context=context,
+        confirm_message=Message.CONFIRM_REMOVE_NOTE,
+        success_message=Message.REMOVED_NOTE,
+        action=lambda: context.contacts.remove_note(context.args["name"]),
+    )
 
 
 def add_tag(context: AppContext) -> AppResult:

@@ -1,5 +1,5 @@
 """Classic CLI input loop."""
-
+import shlex
 from collections.abc import Callable
 
 from assistant_t800.application.dispatcher import CommandDispatcher
@@ -7,8 +7,10 @@ from assistant_t800.application.results import AppResult
 from assistant_t800.interfaces.cli.presenter import CliPresenter
 from assistant_t800.localization import ErrorCode, Message
 from assistant_t800.suggestions import SuggestionService
+from assistant_t800.application.enums import SystemValue
 
 InputFunc = Callable[[str], str]
+NoteInputFunc = Callable[[str, str], str]
 OutputFunc = Callable[[str], None]
 
 
@@ -20,6 +22,7 @@ class CliRunner:
         dispatcher: CommandDispatcher,
         presenter: CliPresenter,
         input_func: InputFunc = input,
+        note_input_func: NoteInputFunc | None = None,
         output_func: OutputFunc = print,
         suggestion_service: SuggestionService | None = None,
         force_suggestion_confirm: bool = True,
@@ -28,6 +31,7 @@ class CliRunner:
         self._dispatcher = dispatcher
         self._presenter = presenter
         self._input_func = input_func
+        self._note_input_func = note_input_func
         self._output_func = output_func
         self._suggestion_service = suggestion_service
         self._force_suggestion_confirm = force_suggestion_confirm
@@ -65,7 +69,7 @@ class CliRunner:
     def _dispatch_input(self) -> AppResult:
         """Read, resolve, dispatch, and optionally confirm one input line."""
         raw_input = self._input_func(f"{Message.PROMPT} ")
-        command_input = raw_input
+        command_input = self._resolve_note_edit_input(raw_input)
 
         result = self.dispatcher.dispatch(command_input)
 
@@ -134,3 +138,41 @@ class CliRunner:
             result = suggested_input
 
         return result
+
+    def _resolve_note_edit_input(self, raw_input: str) -> str:
+        """Resolve note edit input."""
+        if self._note_input_func is None:
+            return raw_input
+
+        try:
+            parts = shlex.split(raw_input)
+        except ValueError:
+            return raw_input
+
+        if len(parts) != 2:
+            return raw_input
+
+        if parts[0] != "edit-note":
+            return raw_input
+
+        name = parts[1]
+
+        # getting existing note content from contact
+        try:
+            contact = self.dispatcher.context.contacts.get_contact(name)
+        except KeyError:
+            return raw_input
+
+        existing_note = contact.note
+        if existing_note == SystemValue.EMPTY_TEXT.value:
+            existing_note = ""
+
+        edited_note = self._note_input_func(f"Note for {name}: ", existing_note)
+
+        # we need to rebuild the command input with edited note content correctly i.e. (edit-note Alice "Call after demo")
+        return f"edit-note {self._quote_arg(name)} {self._quote_arg(edited_note)}"
+
+    @staticmethod
+    def _quote_arg(value: str) -> str:
+        """Quote one argument for dispatcher parsing."""
+        return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'

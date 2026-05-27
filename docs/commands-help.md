@@ -246,7 +246,7 @@ search email
 
 Search contacts by attached note text.
 
-The note field exists in the contact model. Editing note text is planned as a separate CLI workflow.
+The note field exists in the contact model and can be edited with `edit-note`.
 
 ```bash
 search-note project
@@ -514,36 +514,32 @@ delete email
 
 ---
 
-## Planned Contact Note Commands
+## Implemented Contact Note Commands
 
-These commands are reserved by the architecture but are not implemented in the current CLI build yet.
+These commands manage the note attached to a contact.
 
-### `edit-note <name>`
+### `edit-note <name> <note>`
 
-**Status:** Planned
+**Status:** Implemented
 
-Open the current contact note in an interactive editor.
+Set or replace the current contact note.
 
-Expected behavior:
-
-1. Load the current note text.
-2. Open a multiline editor.
-3. Save the updated text back to the contact.
+Use quotes when the note contains spaces.
 
 ```bash
-edit-note John
-edit-note "John Smith"
+edit-note John "Call after demo"
+edit-note "John Smith" "Meeting tomorrow at 10"
 ```
 
 ---
 
 ### `remove-note <name>`
 
-**Status:** Planned
+**Status:** Implemented
 
 Remove the note attached to a contact.
 
-Expected behavior: store the internal empty note value and ask for confirmation.
+This command asks for confirmation and stores the internal empty note value.
 
 ```bash
 remove-note John
