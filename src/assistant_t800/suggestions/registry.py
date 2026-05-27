@@ -113,6 +113,9 @@ class CommandRegistry:
                     else getattr(command, field_name, default)
                 )
 
+                if field_name == "syntax" and not value:
+                    value = data["name"]
+
                 data[field_name] = (
                     tuple(str(item) for item in value)
                     if field_type == "iter"
