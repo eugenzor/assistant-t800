@@ -285,6 +285,40 @@ def remove_note(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
     )
 
 
+def add_tags(ctx: RunContext[AgentDeps], name: str, tags: list[str]) -> ToolReturn[str]:
+    """Add one or more tags to an existing contact."""
+    if not tags or not any(tag.strip() for tag in tags):
+        return _fail("Не вдалося додати теги: тег не може бути порожнім.")
+
+    try:
+        ctx.deps.contacts_service.add_tags(name, tags)
+    except (KeyError, ValueError) as exc:
+        return _fail(f"Не вдалося додати теги: {exc}")
+
+    return _ok(
+        f"Теги додано до контакту «{name}»: {len(tags)}.",
+        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+    )
+
+
+def remove_tags(
+    ctx: RunContext[AgentDeps], name: str, tags: list[str]
+) -> ToolReturn[str]:
+    """Remove one or more tags from an existing contact."""
+    if not tags or not any(tag.strip() for tag in tags):
+        return _fail("Не вдалося видалити теги: тег не може бути порожнім.")
+
+    try:
+        ctx.deps.contacts_service.remove_tags(name, tags)
+    except (KeyError, ValueError) as exc:
+        return _fail(f"Не вдалося видалити теги: {exc}")
+
+    return _ok(
+        f"Теги видалено у контакту «{name}»: {len(tags)}.",
+        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+    )
+
+
 def remove_contact(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
     """Remove a contact from storage."""
     try:

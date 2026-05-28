@@ -17,6 +17,7 @@ from assistant_t800.ai.tools import (
     add_contact,
     add_emails,
     add_phones,
+    add_tags,
     get_contact,
     list_contacts,
     remove_address,
@@ -27,6 +28,7 @@ from assistant_t800.ai.tools import (
     remove_emails,
     remove_note,
     remove_phones,
+    remove_tags,
     search_contacts,
     search_contacts_by_email,
     search_contacts_by_name,
@@ -64,12 +66,14 @@ SYSTEM_PROMPT = """\
 - адресу;
 - день народження у форматі DD.MM.YYYY;
 - нотатку;
+- теги (нормалізуються до нижнього регістру).
 
 Використовуй доступні інструменти для таких дій:
 - додавання контактів;
 - додавання та видалення телефонів і e-mail у існуючих контактів;
 - встановлення та видалення адреси і дня народження;
 - встановлення та видалення нотатки контакту;
+- додавання та видалення тегів контакту;
 - пошуку контактів — як загального, так і за окремими полями (ім’я, телефон, e-mail,
 нотатка, тег);
 - перегляду списку контактів та отримання одного контакту за іменем;
@@ -132,6 +136,8 @@ def _get_agent() -> Agent[AgentDeps, str]:
     agent.tool(remove_all_phones)
     agent.tool(remove_emails)
     agent.tool(remove_all_emails)
+    agent.tool(add_tags)
+    agent.tool(remove_tags)
     return agent
 
 

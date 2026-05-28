@@ -59,6 +59,9 @@ class TextualPresenter:
             if contact.note != SystemValue.EMPTY_TEXT.value:
                 self._log.write(f"   нотатка: {contact.note}")
 
+            if contact.tags:
+                self._log.write("   теги: " + ", ".join(sorted(contact.tags)))
+
     def _render_birthdays(self, birthdays: list[BirthdaysListContact]) -> None:
         """Render upcoming birthdays into the display log."""
         self._log.clear()

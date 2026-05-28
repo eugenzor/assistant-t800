@@ -574,3 +574,81 @@ def test_remove_all_emails_missing_contact_leaves_state_untouched(
     assert service.list_contacts() == []
     assert presenter.refresh_calls == []
     assert result.metadata is None
+
+
+# ---------- add_tags ----------
+
+
+def test_add_tags_appends_multiple(ctx, service, presenter):
+    tools.add_contact(ctx, "Іван")
+
+    result = tools.add_tags(ctx, "Іван", ["робота", "vip"])
+
+    tags = service.get_contact("Іван").tags
+    assert tags == {"робота", "vip"}
+    assert presenter.refresh_calls == []
+    assert len(_contacts(result)) == 1
+
+
+def test_add_tags_missing_contact_leaves_state_untouched(ctx, service, presenter):
+    result = tools.add_tags(ctx, "Невідомий", ["робота"])
+
+    assert service.list_contacts() == []
+    assert presenter.refresh_calls == []
+    assert result.metadata is None
+
+
+def test_add_tags_empty_value_is_rejected(ctx, service, presenter):
+    tools.add_contact(ctx, "Іван")
+
+    result = tools.add_tags(ctx, "Іван", ["   "])
+
+    assert service.get_contact("Іван").tags == set()
+    assert presenter.refresh_calls == []
+    assert result.metadata is None
+
+
+# ---------- remove_tags ----------
+
+
+def test_remove_tags_removes_listed_values(ctx, service, presenter):
+    tools.add_contact(ctx, "Іван")
+    ctx.deps.contacts_service.add_tags("Іван", ["робота", "vip"])
+
+    result = tools.remove_tags(ctx, "Іван", ["робота"])
+
+    assert service.get_contact("Іван").tags == {"vip"}
+    assert presenter.refresh_calls == []
+    assert len(_contacts(result)) == 1
+
+
+def test_remove_tags_unknown_tag_leaves_state_untouched(ctx, service, presenter):
+    tools.add_contact(ctx, "Іван")
+    ctx.deps.contacts_service.add_tags("Іван", ["робота"])
+
+    result = tools.remove_tags(ctx, "Іван", ["хобі"])
+
+    assert service.get_contact("Іван").tags == {"робота"}, (
+        "removing a non-existent tag must not affect existing tags"
+    )
+    assert presenter.refresh_calls == []
+    assert result.metadata is None
+
+
+def test_remove_tags_missing_contact_leaves_state_untouched(ctx, service, presenter):
+    result = tools.remove_tags(ctx, "Невідомий", ["робота"])
+
+    assert service.list_contacts() == []
+    assert presenter.refresh_calls == []
+    assert result.metadata is None
+
+
+def test_remove_tags_empty_value_is_rejected(ctx, service, presenter):
+    tools.add_contact(ctx, "Іван")
+    ctx.deps.contacts_service.add_tags("Іван", ["робота"])
+
+    result = tools.remove_tags(ctx, "Іван", ["   "])
+
+    assert service.get_contact("Іван").tags == {"робота"}
+    assert presenter.refresh_calls == []
+    assert result.metadata is None
