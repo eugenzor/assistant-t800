@@ -123,8 +123,8 @@ AppResult.confirm(Message.CONFIRM_REMOVE_CONTACT, name=name)
 Для запланованого функціоналу використовуйте:
 
 ```python
-def add_tag(context: AppContext) -> AppResult:
-    """Add contact tag."""
+def group_tags(context: AppContext) -> AppResult:
+    """Group contacts by tags."""
     return AppResult.fail(ErrorCode.NOT_IMPLEMENTED)
 ```
 

@@ -76,6 +76,7 @@ class Message(MultiLangEnum):
     CONFIRM_REMOVE_NOTE = auto()
     CONFIRM_REMOVE_PHONE = auto()
     CONFIRM_REMOVE_EMAIL = auto()
+    CONFIRM_REMOVE_TAG = auto()
     CONFIRM_REMOVE_ALL_PHONES = auto()
     CONFIRM_REMOVE_ALL_EMAILS = auto()
     CONFIRM_SUFFIX = auto()
@@ -85,6 +86,7 @@ class Message(MultiLangEnum):
     REMOVED_NOTE = auto()
     REMOVED_PHONE = auto()
     REMOVED_EMAIL = auto()
+    REMOVED_TAG = auto()
 
     NO_CONTACTS = auto()
     USE_QUOTES_HINT = auto()

@@ -176,13 +176,56 @@ def remove_note(context: AppContext) -> AppResult:
 
 
 def add_tag(context: AppContext) -> AppResult:
-    """Return placeholder for future tag creation."""
-    return AppResult.fail(ErrorCode.NOT_IMPLEMENTED)
+    """Add one or more tags to a contact."""
+    parsed = ContactArgumentsParser.parse_values(
+        context.raw_args,
+        command="add-tag",
+        value_name="tag",
+    )
+
+    if isinstance(parsed, AppResult):
+        result = parsed
+    elif not parsed[1]:
+        result = AppResult.fail(
+            ErrorCode.VALIDATION_ERROR,
+            reason="Tag cannot be empty.",
+        )
+    else:
+        result = _add_values(
+            name=parsed[0],
+            values=parsed[1],
+            method=context.contacts.add_tags,
+        )
+
+    return result
 
 
 def remove_tag(context: AppContext) -> AppResult:
-    """Return placeholder for future tag removal."""
-    return AppResult.fail(ErrorCode.NOT_IMPLEMENTED)
+    """Remove one or more tags from a contact after confirmation."""
+    parsed = ContactArgumentsParser.parse_values(
+        context.raw_args,
+        command="remove-tag",
+        value_name="tag",
+    )
+
+    if isinstance(parsed, AppResult):
+        result = parsed
+    elif not parsed[1]:
+        result = AppResult.fail(
+            ErrorCode.VALIDATION_ERROR,
+            reason="Tag cannot be empty.",
+        )
+    else:
+        result = _remove_values(
+            context=context,
+            name=parsed[0],
+            values=parsed[1],
+            confirm_message=Message.CONFIRM_REMOVE_TAG,
+            success_message=Message.REMOVED_TAG,
+            method=context.contacts.remove_tags,
+        )
+
+    return result
 
 
 def add_contact(context: AppContext) -> AppResult:

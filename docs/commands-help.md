@@ -269,7 +269,7 @@ search note
 
 Search contacts by tags.
 
-Tag storage exists in the contact model. Tag editing commands are planned.
+Tag storage exists in the contact model and can be managed with `add-tag` and `remove-tag`.
 
 ```bash
 search-tag work
@@ -548,13 +548,13 @@ remove-note "John Smith"
 
 ---
 
-## Planned Contact Tag Commands
+## Implemented Contact Tag Commands
 
-These commands are reserved by the architecture but are not implemented in the current CLI build yet.
+These commands manage tags attached to contacts.
 
 ### `add-tag <name> <tag>`
 
-**Status:** Planned
+**Status:** Implemented
 
 Add one or more tags to a contact.
 
@@ -570,13 +570,13 @@ add-tag "John Smith" personal;family
 
 ### `remove-tag <name> <tag>`
 
-**Status:** Planned
+**Status:** Implemented
 
 Remove one or more tags from a contact.
 
 Multiple tags should be separated with `;`.
 
-This command should ask for confirmation.
+This command asks for confirmation.
 
 ```bash
 remove-tag John work
