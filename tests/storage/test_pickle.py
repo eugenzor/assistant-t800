@@ -67,9 +67,7 @@ def test_save_without_load_returns_false(tmp_path):
 
     saved = storage.save()
 
-    assert saved is False, (
-        "save must be a no-op when no repository has been entered"
-    )
+    assert saved is False, "save must be a no-op when no repository has been entered"
 
 
 def test_save_persists_repository_state(tmp_path):

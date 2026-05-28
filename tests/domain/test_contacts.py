@@ -20,9 +20,7 @@ def test_add_contact_creates_with_name_only(service):
 
 
 def test_add_contact_creates_with_single_phone_and_email(service):
-    contact = service.add_contact(
-        "Іван", phone="0501234567", email="ivan@example.com"
-    )
+    contact = service.add_contact("Іван", phone="0501234567", email="ivan@example.com")
 
     assert [p.value for p in contact.phones] == ["0501234567"]
     assert [e.value for e in contact.emails] == ["ivan@example.com"]

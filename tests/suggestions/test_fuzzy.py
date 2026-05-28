@@ -77,7 +77,11 @@ def test_suggest_phrase_prefix_requires_word_boundary():
     suggestions = suggester.suggest("helper")
 
     # Fuzzy ratio will still be high but the perfect-prefix branch must not apply.
-    assert not suggestions or suggestions[0].score < 100.0 or "help" in suggestions[0].matched_by
+    assert (
+        not suggestions
+        or suggestions[0].score < 100.0
+        or "help" in suggestions[0].matched_by
+    )
 
 
 # ---------- typo tolerance ----------
