@@ -4,7 +4,6 @@ import pytest
 
 from assistant_t800.application import handlers
 from assistant_t800.application.context import AppContext
-from assistant_t800.application.results import AppResult
 from assistant_t800.localization import ErrorCode, Message
 from assistant_t800.repositories.contacts import ContactsRepository
 from assistant_t800.services.contacts import ContactsService

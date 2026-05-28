@@ -1,6 +1,6 @@
 """Unit tests for ``AgentDeps`` in ``assistant_t800.ai.deps``."""
 
-from assistant_t800.ai.deps import AgentDeps, Presenter
+from assistant_t800.ai.deps import AgentDeps
 from assistant_t800.domain.birthdays import BirthdaysListContact
 from assistant_t800.domain.contacts import Contact
 from assistant_t800.domain.fields import Name

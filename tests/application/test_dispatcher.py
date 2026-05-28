@@ -1,6 +1,5 @@
 """Unit tests for ``CommandDispatcher`` in ``assistant_t800.application.dispatcher``."""
 
-import pytest
 
 from assistant_t800.application.commands import Command
 from assistant_t800.application.context import AppContext

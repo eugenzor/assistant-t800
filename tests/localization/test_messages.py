@@ -1,8 +1,7 @@
 """Unit tests for ``MultiLangEnum``-based enums in ``assistant_t800.localization.messages``."""
 
-from enum import Enum, auto
+from enum import auto
 
-import pytest
 
 from assistant_t800.localization.messages import (
     APP_VERSION,

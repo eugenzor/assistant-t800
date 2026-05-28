@@ -4,7 +4,6 @@ from configparser import ConfigParser
 from enum import Enum, auto
 from pathlib import Path
 
-import pytest
 
 from assistant_t800.application.results import AppMessage
 from assistant_t800.localization.messages import ErrorCode, Message
