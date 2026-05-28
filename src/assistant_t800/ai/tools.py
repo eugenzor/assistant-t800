@@ -256,6 +256,35 @@ def add_emails(
     )
 
 
+def set_note(ctx: RunContext[AgentDeps], name: str, note: str) -> ToolReturn[str]:
+    """Set or update an existing contact note."""
+    if not note.strip():
+        return _fail("Не вдалося встановити нотатку: нотатка не може бути порожньою.")
+
+    try:
+        ctx.deps.contacts_service.set_note(name, note)
+    except (KeyError, ValueError) as exc:
+        return _fail(f"Не вдалося встановити нотатку: {exc}")
+
+    return _ok(
+        f"Нотатку контакту «{name}» оновлено.",
+        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+    )
+
+
+def remove_note(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
+    """Remove the note from an existing contact."""
+    try:
+        ctx.deps.contacts_service.remove_note(name)
+    except (KeyError, ValueError) as exc:
+        return _fail(f"Не вдалося видалити нотатку: {exc}")
+
+    return _ok(
+        f"Нотатку контакту «{name}» видалено.",
+        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+    )
+
+
 def remove_contact(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
     """Remove a contact from storage."""
     try:

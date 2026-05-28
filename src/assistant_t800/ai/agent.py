@@ -25,6 +25,7 @@ from assistant_t800.ai.tools import (
     remove_birthday,
     remove_contact,
     remove_emails,
+    remove_note,
     remove_phones,
     search_contacts,
     search_contacts_by_email,
@@ -35,6 +36,7 @@ from assistant_t800.ai.tools import (
     search_upcoming_birthdays,
     set_address,
     set_birthday,
+    set_note,
 )
 
 # Default AI model name. Can be overridden via environment variable.
@@ -60,12 +62,14 @@ SYSTEM_PROMPT = """\
 - телефони — кожен телефон має складатися рівно з 10 цифр;
 - електронні адреси;
 - адресу;
-- день народження у форматі DD.MM.YYYY.
+- день народження у форматі DD.MM.YYYY;
+- нотатку;
 
 Використовуй доступні інструменти для таких дій:
 - додавання контактів;
 - додавання та видалення телефонів і e-mail у існуючих контактів;
 - встановлення та видалення адреси і дня народження;
+- встановлення та видалення нотатки контакту;
 - пошуку контактів — як загального, так і за окремими полями (ім’я, телефон, e-mail,
 нотатка, тег);
 - перегляду списку контактів та отримання одного контакту за іменем;
@@ -117,11 +121,13 @@ def _get_agent() -> Agent[AgentDeps, str]:
     agent.tool(search_upcoming_birthdays)
     agent.tool(set_address)
     agent.tool(set_birthday)
+    agent.tool(set_note)
     agent.tool(add_phones)
     agent.tool(add_emails)
     agent.tool(remove_contact)
     agent.tool(remove_address)
     agent.tool(remove_birthday)
+    agent.tool(remove_note)
     agent.tool(remove_phones)
     agent.tool(remove_all_phones)
     agent.tool(remove_emails)

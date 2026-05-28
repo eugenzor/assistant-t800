@@ -2,6 +2,7 @@
 
 from textual.widgets import RichLog
 
+from assistant_t800.application.enums import SystemValue
 from assistant_t800.domain.birthdays import BirthdaysListContact
 from assistant_t800.domain.contacts import Contact
 from assistant_t800.localization import Message
@@ -54,6 +55,9 @@ class TextualPresenter:
 
             if contact.birthday is not None:
                 self._log.write(f"   день народження: {contact.birthday}")
+
+            if contact.note != SystemValue.EMPTY_TEXT.value:
+                self._log.write(f"   нотатка: {contact.note}")
 
     def _render_birthdays(self, birthdays: list[BirthdaysListContact]) -> None:
         """Render upcoming birthdays into the display log."""
