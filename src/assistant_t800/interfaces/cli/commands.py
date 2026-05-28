@@ -305,7 +305,8 @@ def build_registry() -> dict[str, Command]:
             name="add-tag",
             handler=add_tag,
             description=Message.ADD_TAG_DESCRIPTION,
-            args=("name", "tag"),
+            usage="add-tag <name> <tag>",
+            parse_args=False,
             aliases=(
                 "фвв-ефп",
                 "add tag",
@@ -322,7 +323,8 @@ def build_registry() -> dict[str, Command]:
             name="remove-tag",
             handler=remove_tag,
             description=Message.REMOVE_TAG_DESCRIPTION,
-            args=("name", "tag"),
+            usage="remove-tag <name> <tag>",
+            parse_args=False,
             aliases=(
                 "куьщму-ефп",
                 "remove tag",

@@ -133,6 +133,24 @@ class ContactsService:
 
         return contact
 
+    def add_tags(self, name: str, tags: Sequence[str]) -> Contact:
+        """Add tags to an existing contact."""
+        contact = self.get_contact(name)
+
+        for tag in tags:
+            contact.add_tag(tag)
+
+        return contact
+
+    def remove_tags(self, name: str, tags: Sequence[str]) -> Contact:
+        """Remove tags from an existing contact."""
+        contact = self.get_contact(name)
+
+        for tag in tags:
+            contact.remove_tag(tag)
+
+        return contact
+
     def remove_contact(self, name: str) -> Contact:
         """Remove a contact from storage."""
         return self._repo.remove(name)
