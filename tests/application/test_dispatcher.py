@@ -78,7 +78,7 @@ def test_dispatch_unbalanced_quotes_fails_with_invalid_syntax():
 
     assert result.success is False
     assert result.message is not None
-    assert result.message.code is ErrorCode.INVALID_COMMAND_SYNTAX
+    assert result.message.code is ErrorCode.INVALID_QUOTES_SYNTAX
 
 
 def test_dispatch_unknown_command_fails_with_unknown_command():

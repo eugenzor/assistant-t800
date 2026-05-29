@@ -25,13 +25,15 @@ def close_app(context: AppContext) -> AppResult:
 def list_contacts(context: AppContext) -> AppResult:
     """Return all contacts."""
     contacts = context.contacts.list_contacts()
-    code = Message.CONTACTS_LISTED if contacts else Message.NO_CONTACTS
 
-    result = AppResult.ok(
-        code,
-        data=contacts,
-        count=len(contacts),
-    )
+    if contacts:
+        result = AppResult.ok(
+            Message.CONTACTS_LISTED,
+            data=contacts,
+            count=len(contacts),
+        )
+    else:
+        result = AppResult.info(ErrorCode.CONTACTS_NOT_FOUND)
 
     return result
 
@@ -48,9 +50,9 @@ def get_contact(context: AppContext) -> AppResult:
             name=contact.name.value,
         )
     except KeyError:
-        result = AppResult.fail(
-            ErrorCode.CONTACT_NOT_FOUND,
-            name=name,
+        result = AppResult.warning(
+            ErrorCode.NAME_NOT_FOUND,
+            query=name,
         )
 
     return result
@@ -61,6 +63,7 @@ def search_contacts(context: AppContext) -> AppResult:
     return _search(
         context=context,
         method=context.contacts.search_contacts,
+        error_code=ErrorCode.QUERY_NOT_FOUND,
     )
 
 
@@ -69,6 +72,7 @@ def search_contacts_by_name(context: AppContext) -> AppResult:
     return _search(
         context=context,
         method=context.contacts.search_contacts_by_name,
+        error_code=ErrorCode.NAME_NOT_FOUND,
     )
 
 
@@ -77,6 +81,7 @@ def search_contacts_by_phone(context: AppContext) -> AppResult:
     return _search(
         context=context,
         method=context.contacts.search_contacts_by_phone,
+        error_code=ErrorCode.PHONE_NOT_FOUND,
     )
 
 
@@ -85,6 +90,7 @@ def search_contacts_by_email(context: AppContext) -> AppResult:
     return _search(
         context=context,
         method=context.contacts.search_contacts_by_email,
+        error_code=ErrorCode.EMAIL_NOT_FOUND,
     )
 
 
@@ -93,6 +99,7 @@ def search_contacts_by_note(context: AppContext) -> AppResult:
     return _search(
         context=context,
         method=context.contacts.search_contacts_by_note,
+        error_code=ErrorCode.NOTE_NOT_FOUND,
     )
 
 
@@ -101,6 +108,7 @@ def search_contacts_by_tag(context: AppContext) -> AppResult:
     return _search(
         context=context,
         method=context.contacts.search_contacts_by_tag,
+        error_code=ErrorCode.TAG_NOT_FOUND,
     )
 
 
@@ -118,11 +126,15 @@ def list_upcoming_birthdays(context: AppContext) -> AppResult:
         else:
             contacts = context.contacts.search_upcoming_birthdays(days)
             code = Message.BIRTHDAYS_FOUND if contacts else Message.NO_BIRTHDAYS
-            result = AppResult.ok(
-                code,
-                data=contacts,
-                days=days,
-                count=len(contacts),
+            result = (
+                AppResult.ok(
+                    code,
+                    data=contacts,
+                    days=days,
+                    count=len(contacts),
+                )
+                if contacts
+                else AppResult.info(Message.NO_BIRTHDAYS, days=days)
             )
 
     return result
@@ -130,7 +142,7 @@ def list_upcoming_birthdays(context: AppContext) -> AppResult:
 
 def edit_note(context: AppContext) -> AppResult:
     """Set or replace a contact note."""
-    parsed = ContactArgumentsParser.parse_named_value(
+    parsed = ContactArgumentsParser.parse_optional_named_value(
         context.raw_args,
         command="edit-note",
         value_name="note",
@@ -140,10 +152,12 @@ def edit_note(context: AppContext) -> AppResult:
         result = parsed
     else:
         name, note = parsed
-        if not note.strip():
+
+        if note is None:
             result = AppResult.fail(
-                ErrorCode.VALIDATION_ERROR,
-                reason="Note cannot be empty.",
+                ErrorCode.MISSING_ARGUMENTS,
+                command="edit-note",
+                syntax="edit-note <name> [note]",
             )
         else:
             try:
@@ -155,10 +169,18 @@ def edit_note(context: AppContext) -> AppResult:
                     field="note",
                 )
             except KeyError:
-                result = AppResult.fail(ErrorCode.CONTACT_NOT_FOUND, name=name)
+                result = AppResult.warning(ErrorCode.NAME_NOT_FOUND, query=name)
             except ValueError as error:
+                contact = None
+
+                try:
+                    contact = context.contacts.get_contact(name)
+                except KeyError:
+                    pass
+
                 result = AppResult.fail(
                     ErrorCode.VALIDATION_ERROR,
+                    data=contact,
                     reason=str(error),
                 )
 
@@ -175,55 +197,42 @@ def remove_note(context: AppContext) -> AppResult:
     )
 
 
-def add_tag(context: AppContext) -> AppResult:
-    """Add one or more tags to a contact."""
-    parsed = ContactArgumentsParser.parse_values(
+def edit_tags(context: AppContext) -> AppResult:
+    """Replace or clear contact tags."""
+    parsed = ContactArgumentsParser.parse_optional_named_value(
         context.raw_args,
-        command="add-tag",
-        value_name="tag",
+        command="edit-tags",
+        value_name="tags",
     )
 
     if isinstance(parsed, AppResult):
         result = parsed
-    elif not parsed[1]:
-        result = AppResult.fail(
-            ErrorCode.VALIDATION_ERROR,
-            reason="Tag cannot be empty.",
-        )
     else:
-        result = _add_values(
-            name=parsed[0],
-            values=parsed[1],
-            method=context.contacts.add_tags,
-        )
+        name, raw_tags = parsed
 
-    return result
-
-
-def remove_tag(context: AppContext) -> AppResult:
-    """Remove one or more tags from a contact after confirmation."""
-    parsed = ContactArgumentsParser.parse_values(
-        context.raw_args,
-        command="remove-tag",
-        value_name="tag",
-    )
-
-    if isinstance(parsed, AppResult):
-        result = parsed
-    elif not parsed[1]:
-        result = AppResult.fail(
-            ErrorCode.VALIDATION_ERROR,
-            reason="Tag cannot be empty.",
-        )
-    else:
-        result = _remove_values(
-            context=context,
-            name=parsed[0],
-            values=parsed[1],
-            confirm_message=Message.CONFIRM_REMOVE_TAG,
-            success_message=Message.REMOVED_TAG,
-            method=context.contacts.remove_tags,
-        )
+        if raw_tags is None:
+            result = AppResult.fail(
+                ErrorCode.MISSING_ARGUMENTS,
+                command="edit-tags",
+                syntax="edit-tags <name> [tags]",
+            )
+        elif not raw_tags.strip() and not context.confirmed:
+            result = AppResult.confirm(
+                Message.CONFIRM_REMOVE_TAGS,
+                name=name,
+            )
+        else:
+            message = (
+                Message.REMOVED_TAGS
+                if not raw_tags.strip()
+                else Message.CONTACT_TAGS_UPDATED
+            )
+            result = _mutate_contact(
+                context=context,
+                action=lambda: context.contacts.set_tags_from_text(name, raw_tags),
+                message_code=message,
+                field="tags",
+            )
 
     return result
 
@@ -436,17 +445,21 @@ def _search(
     *,
     context: AppContext,
     method: Callable[[str], list[object]],
+    error_code: ErrorCode,
 ) -> AppResult:
     """Run a search command."""
     query = context.args["query"]
     contacts = method(query)
 
-    result = AppResult.ok(
-        Message.CONTACTS_FOUND,
-        data=contacts,
-        query=query,
-        count=len(contacts),
-    )
+    if contacts:
+        result = AppResult.ok(
+            Message.CONTACTS_FOUND,
+            data=contacts,
+            query=query,
+            count=len(contacts),
+        )
+    else:
+        result = AppResult.warning(error_code, query=query)
 
     return result
 

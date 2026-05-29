@@ -1,65 +1,38 @@
 # Assistant T800 — Command Help
 
-This document describes both the commands implemented in the current CLI build and the commands already planned by the project architecture.
-
-Status markers:
-
-- **Implemented** — available in the current CLI.
-- **Planned** — reserved by the architecture, but not implemented in the current CLI yet.
+This document describes commands implemented in the current CLI checkpoint.
 
 ---
 
 ## General Rules
 
-- Use quotes for values containing spaces.
+Use quotes for values containing spaces:
 
-  ```bash
-  add "John Smith" 0991112233 "New York"
-  ```
+```bash
+add "John Smith" 0991112233 "New York"
+```
 
-- Use semicolon `;` to pass multiple phones or emails.
+Use configured multi-value separators for multiple values. Current separators include `;` and `,` where supported.
 
-  ```bash
-  add-phone John 0991112233;0992223344
-  add-email John john@example.com;work@example.com
-  ```
+```bash
+add-phone John 0991112233;0992223344
+add-email John john@example.com;work@example.com
+edit-tags John work;friends,usa
+```
 
-- Remove commands always ask for confirmation.
+Remove commands ask for confirmation.
 
-- CLI command history is stored in:
+Type `help` or `?` to show help.
 
-  ```text
-  .data/cli_commands_history
-  ```
-
-- Address book data is stored in:
-
-  ```text
-  .data/address_book.pkl
-  ```
-
-- Type `help` to show command help.
-
-- Type `exit`, `quit`, or `q` to close the assistant.
+Type `exit`, `quit`, or `q` to close the assistant.
 
 ---
 
-## Implemented Contact Commands
+## Contact Commands
 
 ### `add <name> [phone] [email] [address] [birthday]`
 
-**Status:** Implemented
-
 Create a new contact.
-
-Optional values may be passed in any order:
-
-| Value | Description |
-| --- | --- |
-| `phone` | Phone number validated by the domain model |
-| `email` | Valid email address |
-| `address` | Free text; use quotes if it contains spaces |
-| `birthday` | `DD.MM.YYYY`, `DD-MM-YYYY`, or `DD/MM/YYYY` |
 
 Examples:
 
@@ -71,23 +44,11 @@ add John 0991112233 john@example.com "New York" 25.05.1990
 add "John Smith" john@example.com 25/05/1990 "New York"
 ```
 
-Aliases include:
-
-```text
-додати
-```
-
 ---
 
 ### `contacts`
 
-**Status:** Implemented
-
-Show all saved contacts.
-
-```bash
-contacts
-```
+Show all contacts.
 
 Aliases include:
 
@@ -100,544 +61,359 @@ all
 
 ### `get <name>`
 
-**Status:** Implemented
-
-Show detailed information about one contact.
+Show detailed contact card.
 
 ```bash
 get John
 get "John Smith"
 ```
 
-Aliases include:
-
-```text
-надай
-```
-
 ---
-
-### `birthdays [days]`
-
-**Status:** Implemented
-
-Show contacts whose birthdays should be congratulated within the selected number of days.
-
-If `days` is omitted, the default value is `7`.
-
-Weekend birthday greetings are moved to the following Monday.
-
-```bash
-birthdays
-birthdays 7
-birthdays 14
-```
-
-Aliases include:
-
-```text
-дні народження
-іменинники
-```
-
----
-
-## Implemented Search Commands
-
-All search commands are case-insensitive and support partial matches.
 
 ### `search <query>`
 
-**Status:** Implemented
-
-Search contacts by all searchable fields:
-
-- name
-- phone
-- email
-- address
-- birthday
-- note text
-- tags
+Search contacts by all searchable fields.
 
 ```bash
-search john
-search gmail.com
+search John
 search 099
-search urgent
-search "New York"
+search New
+search work
 ```
 
-Aliases include:
+Search includes:
 
-```text
-шукай
-знайди
-```
+* name
+* phone
+* email
+* address
+* birthday
+* notes
+* tags
 
 ---
 
 ### `search-name <query>`
 
-**Status:** Implemented
-
-Search contacts by name.
+Search by contact name.
 
 ```bash
-search-name john
-search-name smith
-```
-
-Aliases include:
-
-```text
-search name
-шукай ім'я
-знайди ім'я
+search-name John
 ```
 
 ---
 
 ### `search-phone <query>`
 
-**Status:** Implemented
-
-Search contacts by phone number.
+Search by phone.
 
 ```bash
 search-phone 099
-search-phone 2233
-```
-
-Aliases include:
-
-```text
-search phone
-шукай телефон
-знайди телефон
 ```
 
 ---
 
 ### `search-email <query>`
 
-**Status:** Implemented
-
-Search contacts by email address.
+Search by e-mail.
 
 ```bash
 search-email gmail
-search-email john@
-```
-
-Aliases include:
-
-```text
-search email
-шукай ємейл
-знайди ємейл
 ```
 
 ---
 
 ### `search-note <query>`
 
-**Status:** Implemented
-
-Search contacts by attached note text.
-
-The note field exists in the contact model and can be edited with `edit-note`.
+Search by note text.
 
 ```bash
-search-note project
-search-note "meeting tomorrow"
-```
-
-Aliases include:
-
-```text
-search note
-шукай нотатку
-знайди нотатку
+search-note demo
 ```
 
 ---
 
 ### `search-tag <query>`
 
-**Status:** Implemented
-
-Search contacts by tags.
-
-Tag storage exists in the contact model and can be managed with `add-tag` and `remove-tag`.
+Search by tag.
 
 ```bash
 search-tag work
-search-tag urgent
-```
-
-Aliases include:
-
-```text
-search tag
-шукай тег
-знайди тег
 ```
 
 ---
 
-## Implemented Contact Update Commands
+### `birthdays [days]`
+
+Show contacts whose birthdays should be congratulated within the selected period.
+
+Default period: 7 days.
+
+```bash
+birthdays
+birthdays 14
+```
+
+If the birthday falls on Saturday or Sunday, the congratulation date is moved to Monday.
+
+---
+
+## Update Commands
 
 ### `set-address <name> <address>`
 
-**Status:** Implemented
-
-Set or replace a contact address.
+Set or replace contact address.
 
 ```bash
-set-address John "New York"
-set-address "John Smith" "Kyiv, Ukraine"
-```
-
-Aliases include:
-
-```text
-set address
-додай адресу
+set-address John "New York, Wall Street"
 ```
 
 ---
 
 ### `set-birthday <name> <birthday>`
 
-**Status:** Implemented
+Set or replace contact birthday.
 
-Set or replace a contact birthday.
+Supported input formats:
 
-Supported date formats:
+```text
+DD.MM.YYYY
+DD-MM-YYYY
+DD/MM/YYYY
+```
 
-- `DD.MM.YYYY`
-- `DD-MM-YYYY`
-- `DD/MM/YYYY`
+Example:
 
 ```bash
 set-birthday John 25.05.1990
-set-birthday "John Smith" 25/05/1990
-```
-
-Aliases include:
-
-```text
-set birthday
-додай день народження
 ```
 
 ---
 
 ### `add-phone <name> <phone>`
 
-**Status:** Implemented
-
-Add one or more phone numbers to an existing contact.
-
-Multiple values must be separated with `;`.
+Add one or more phone numbers.
 
 ```bash
 add-phone John 0991112233
 add-phone John 0991112233;0992223344
-add-phone "John Smith" 0991112233
-```
-
-Aliases include:
-
-```text
-add phone
-додай телефон
 ```
 
 ---
 
 ### `add-email <name> <email>`
 
-**Status:** Implemented
-
-Add one or more email addresses to an existing contact.
-
-Multiple values must be separated with `;`.
+Add one or more e-mail addresses.
 
 ```bash
 add-email John john@example.com
 add-email John john@example.com;work@example.com
-add-email "John Smith" john@example.com
-```
-
-Aliases include:
-
-```text
-add email
-додай ємейл
 ```
 
 ---
 
-## Implemented Contact Remove Commands
+## Notes
 
-### `remove <name>`
+### `edit-note <name>`
 
-**Status:** Implemented
+Open an inline multiline note editor directly below the contact card.
 
-Delete the whole contact.
+The current note text is automatically loaded into the editor.
 
-This command always asks for confirmation.
+Example:
 
 ```bash
-remove John
-remove "John Smith"
+edit-note "John Smith"
 ```
 
-Aliases include:
+Key bindings:
 
 ```text
-delete
-видали
+Enter    → new line
+Ctrl+S   → save
+Esc      → cancel
+Ctrl+C   → cancel
 ```
+
+Behavior:
+
+* existing note text is prefilled;
+* editing happens under the contact card;
+* save updates the contact note;
+* successful save returns to the contact card and displays a success status;
+* `Esc` or `Ctrl+C` cancels editing and returns to the contact card without changes.
 
 ---
 
-### `remove-address <name>`
+### `edit-note <name> [note]`
 
-**Status:** Implemented
-
-Remove the contact address.
-
-This command always asks for confirmation.
+Directly replace note text without opening the editor.
 
 ```bash
-remove-address John
-remove-address "John Smith"
-```
-
-Aliases include:
-
-```text
-remove address
-delete address
-видали адресу
-```
-
----
-
-### `remove-birthday <name>`
-
-**Status:** Implemented
-
-Remove the contact birthday.
-
-This command always asks for confirmation.
-
-```bash
-remove-birthday John
-remove-birthday "John Smith"
-```
-
-Aliases include:
-
-```text
-remove birthday
-delete birthday
-видали день народження
-```
-
----
-
-### `remove-phone <name> [phone]`
-
-**Status:** Implemented
-
-Remove one, many, or all phone numbers from a contact.
-
-If `phone` is provided, the selected value or values are removed.
-
-If `phone` is omitted:
-
-- if the contact has one phone, it is removed;
-- if the contact has several phones, the assistant asks whether all phones should be removed.
-
-Multiple values must be separated with `;`.
-
-```bash
-remove-phone John
-remove-phone John 0991112233
-remove-phone John 0991112233;0992223344
-remove-phone "John Smith" 0991112233
-```
-
-Aliases include:
-
-```text
-remove phone
-delete phone
-видали телефон
-```
-
----
-
-### `remove-email <name> [email]`
-
-**Status:** Implemented
-
-Remove one, many, or all email addresses from a contact.
-
-If `email` is provided, the selected value or values are removed.
-
-If `email` is omitted:
-
-- if the contact has one email, it is removed;
-- if the contact has several emails, the assistant asks whether all emails should be removed.
-
-Multiple values must be separated with `;`.
-
-```bash
-remove-email John
-remove-email John john@example.com
-remove-email John john@example.com;work@example.com
-remove-email "John Smith" john@example.com
-```
-
-Aliases include:
-
-```text
-remove email
-delete email
-видали ємейл
-```
-
----
-
-## Implemented Contact Note Commands
-
-These commands manage the note attached to a contact.
-
-### `edit-note <name> <note>`
-
-**Status:** Implemented
-
-Set or replace the current contact note.
-
-Use quotes when the note contains spaces.
-
-```bash
-edit-note John "Call after demo"
-edit-note "John Smith" "Meeting tomorrow at 10"
+edit-note "John Smith" "Call after the demo"
 ```
 
 ---
 
 ### `remove-note <name>`
 
-**Status:** Implemented
-
-Remove the note attached to a contact.
-
-This command asks for confirmation and stores the internal empty note value.
+Remove contact note.
 
 ```bash
-remove-note John
 remove-note "John Smith"
 ```
 
----
-
-## Implemented Contact Tag Commands
-
-These commands manage tags attached to contacts.
-
-### `add-tag <name> <tag>`
-
-**Status:** Implemented
-
-Add one or more tags to a contact.
-
-Multiple tags should be separated with `;`.
-
-```bash
-add-tag John work
-add-tag John work;urgent
-add-tag "John Smith" personal;family
-```
-
----
-
-### `remove-tag <name> <tag>`
-
-**Status:** Implemented
-
-Remove one or more tags from a contact.
-
-Multiple tags should be separated with `;`.
-
 This command asks for confirmation.
 
+---
+
+## Tags
+
+### `edit-tags <name>`
+
+Open an inline single-line tag editor directly below the contact card.
+
+The current tags are automatically loaded into the editor.
+
 ```bash
-remove-tag John work
-remove-tag John work;urgent
-remove-tag "John Smith" personal
+edit-tags "John Smith"
 ```
+
+Behavior:
+
+* existing tags are prefilled;
+* `;` and `,` are accepted as separators;
+* all tags are replaced by the entered value;
+* `Esc` cancels editing and returns to the contact card without changes.
+
+If the saved value is empty:
+
+* the assistant asks for confirmation;
+* after confirmation all tags are removed;
+* the contact card is displayed with a status message.
 
 ---
 
-## AI Command Suggestions
+### `edit-tags <name> [tags]`
 
-**Status:** Implemented
+Directly replace all tags without opening the editor.
 
-If the user enters an unknown command, the assistant can suggest or run a corrected command using fuzzy matching and AI fallback.
+```bash
+edit-tags "John Smith" "work; friends, usa"
+```
 
 Examples:
 
 ```bash
-contats
+edit-tags John work
+edit-tags John work;urgent
+edit-tags John work;friends,usa
+```
+
+Rules:
+
+* existing tags are completely replaced;
+* duplicate tags are ignored by domain validation;
+* empty value removes all tags after confirmation.
+
+---
+
+## Remove Commands
+
+### `remove <name>`
+
+Remove the whole contact with confirmation.
+
+```bash
+remove John
+```
+
+---
+
+### `remove-address <name>`
+
+Remove address.
+
+```bash
+remove-address John
+```
+
+---
+
+### `remove-birthday <name>`
+
+Remove birthday.
+
+```bash
+remove-birthday John
+```
+
+---
+
+### `remove-phone <name> [phone]`
+
+Remove one phone or all phones.
+
+```bash
+remove-phone John 0991112233
+remove-phone John
+```
+
+If no phone is specified:
+
+* no phones → error;
+* one phone → confirmation to remove it;
+* multiple phones → confirmation to remove all.
+
+---
+
+### `remove-email <name> [email]`
+
+Remove one e-mail or all e-mails.
+
+```bash
+remove-email John john@example.com
+remove-email John
+```
+
+If no e-mail is specified:
+
+* no e-mails → error;
+* one e-mail → confirmation to remove it;
+* multiple e-mails → confirmation to remove all.
+
+---
+
+## Suggestions
+
+If a command is unknown, CLI may suggest a corrected command using fuzzy and AI providers.
+
+Example:
+
+```text
 видали Аліса
-знайди телефон Аліса
 ```
 
-The assistant can resolve natural-language-like input to canonical commands such as:
+may be suggested as:
 
-```bash
-contacts
+```text
 remove Аліса
-search-phone Аліса
 ```
 
----
+Other examples:
 
-## Interface Modes
-
-### CLI mode
-
-**Status:** Implemented
-
-Default mode:
-
-```bash
-assistant-t800
+```text
+contats
+serch John
+видали телефон Аліса
 ```
 
-or:
+may be resolved to:
 
-```bash
-assistant-t800 cli
-```
-
----
-
-### TUI mode
-
-**Status:** Implemented as an optional AI interface
-
-```bash
-assistant-t800 tui
-assistant-t800 --tui
-assistant-t800 --enable-ai
+```text
+contacts
+search John
+remove-phone Аліса
 ```
 
 ---
@@ -646,9 +422,7 @@ assistant-t800 --enable-ai
 
 ### `help`
 
-**Status:** Implemented
-
-Show available commands.
+Show command help.
 
 ```bash
 help
@@ -656,9 +430,17 @@ help
 
 ---
 
-### `exit`, `quit`, `q`
+### `?`
 
-**Status:** Implemented
+Alias for help.
+
+```bash
+?
+```
+
+---
+
+### `exit`, `quit`, `q`
 
 Close the assistant.
 

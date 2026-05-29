@@ -2,6 +2,8 @@
 
 import pytest
 
+from assistant_t800.domain.contacts import Contact
+from assistant_t800.domain.fields import Name
 from assistant_t800.repositories.contacts import ContactsRepository
 from assistant_t800.services.contacts import ContactsService
 
@@ -385,3 +387,24 @@ def test_service_uses_provided_repository_instance():
     service.add_contact("Іван")
 
     assert repo.exists("Іван"), "service must persist to the supplied repository"
+
+
+# ---------- tags replacement ----------
+
+
+def test_set_tags_replaces_existing_tags():
+    contact = Contact(Name("John Smith"))
+    contact.add_tag("old")
+
+    contact.set_tags(("Work", "USA", "work"))
+
+    assert contact.tags == {"work", "usa"}
+
+
+def test_clear_tags_removes_all_tags():
+    contact = Contact(Name("Іван"))
+    contact.set_tags(("робота", "важливо"))
+
+    contact.clear_tags()
+
+    assert contact.tags == set()

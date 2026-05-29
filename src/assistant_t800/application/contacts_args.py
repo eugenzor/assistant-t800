@@ -117,6 +117,32 @@ class ContactArgumentsParser:
         return result
 
     @classmethod
+    def parse_optional_named_value(
+        cls,
+        args: tuple[str, ...],
+        *,
+        command: str,
+        value_name: str,
+    ) -> tuple[str, str | None] | AppResult:
+        """Parse ``<name> [value]`` commands with a single optional value."""
+        if not args:
+            result: tuple[str, str | None] | AppResult = AppResult.fail(
+                ErrorCode.MISSING_ARGUMENTS,
+                command=command,
+                syntax=f"{command} <name> [{value_name}]",
+            )
+        elif len(args) > 2:
+            result = AppResult.fail(
+                ErrorCode.EXTRA_ARGUMENTS,
+                command=command,
+                hint=str(Message.USE_QUOTES_HINT),
+            )
+        else:
+            result = args[0], args[1] if len(args) == 2 else None
+
+        return result
+
+    @classmethod
     def split_multi_values(cls, value: str) -> tuple[str, ...]:
         """Split a multi-value argument by configured separators."""
         pattern = f"[{re.escape(SystemValue.MULTI_VALUE_SEPARATORS.value)}]"

@@ -5,7 +5,6 @@ from typing import Any
 
 import pytest
 
-from assistant_t800.ai.deps import AgentDeps
 from assistant_t800.domain.birthdays import BirthdaysListContact
 from assistant_t800.domain.contacts import Contact
 from assistant_t800.repositories.contacts import ContactsRepository
@@ -50,10 +49,14 @@ def presenter() -> FakePresenter:
 
 
 @pytest.fixture
-def deps(service: ContactsService, presenter: FakePresenter) -> AgentDeps:
+def deps(service: ContactsService, presenter: FakePresenter):
+    """Return AI dependencies, skipping AI tests when pydantic_ai is unavailable."""
+    pytest.importorskip("pydantic_ai")
+    from assistant_t800.ai.deps import AgentDeps
+
     return AgentDeps(contacts_service=service, presenter=presenter)
 
 
 @pytest.fixture
-def ctx(deps: AgentDeps) -> FakeRunContext:
+def ctx(deps) -> FakeRunContext:
     return FakeRunContext(deps=deps)

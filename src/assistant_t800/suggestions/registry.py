@@ -113,14 +113,16 @@ class CommandRegistry:
                     else getattr(command, field_name, default)
                 )
 
-                if field_name == "syntax" and not value:
-                    value = data["name"]
+                if field_type == "iter":
+                    data[field_name] = tuple(str(item) for item in value)
+                else:
+                    normalized = str(value).strip()
+                    data[field_name] = (
+                        str(data["name"])
+                        if field_name == "syntax" and not normalized
+                        else normalized
+                    )
 
-                data[field_name] = (
-                    tuple(str(item) for item in value)
-                    if field_type == "iter"
-                    else str(value)
-                )
             result.add(**data)
 
         return result
