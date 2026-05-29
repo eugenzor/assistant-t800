@@ -2,7 +2,7 @@
 
 Assistant T800 — це персональний CLI/TUI помічник для керування контактами з опційним AI-режимом на базі Google Gemini. Цей документ дає відповідь на три питання: **як запустити**, **який функціонал є**, і **що загалом можна робити** в проєкті.
 
-> Суміжні документи в теці: [architecture.md](architecture.md) — внутрішня будова, [commands-help.md](commands-help.md) — повний довідник команд, [notes.md](notes.md) — презентаційні слайди, [checklist.md](checklist.md) — статус вимог GoIT.
+> Суміжні документи в теці: [architecture.md](architecture.md) — внутрішня будова, [commands-help.md](commands-help.md) — повний довідник команд, [notes.md](notes.md) — презентаційні слайди (включно з AI-тегами), [checklist.md](checklist.md) — статус вимог GoIT.
 
 ---
 
@@ -113,7 +113,7 @@ domain → repositories → services → application → interfaces (CLI / TUI)
 
 **Редагування**
 - `set-address`, `set-birthday`, `add-phone`, `add-email`, `edit-note`
-- `edit-tags <name> [tag1 tag2 ...]` — інтерактивне редагування тегів
+- `edit-tags <name> [tag1 tag2 ...]` — інтерактивне редагування тегів (інлайн-поле з prompt_toolkit)
 - `suggest-tags <name>` — AI пропонує теги, користувач підтверджує/править інлайн
 
 **Видалення (з підтвердженням)**
@@ -140,6 +140,20 @@ domain → repositories → services → application → interfaces (CLI / TUI)
 - Історія діалогу з лімітом (за замовчуванням 10 повідомлень)
 - Двопанельний UI: 70% контакти + 30% чат
 - LLM бачить структуровані дані: усі read-інструменти повертають JSON через `ai/utils.py::format_contacts_for_llm` з обираними полями (`ContactField` enum) і капом за `max_items` (default 25, конфігурується)
+
+**AI-пропозиції тегів — `suggest-tags`** (`src/assistant_t800/ai/agent.py`, `services/contacts.py`)
+- Окремий one-shot LLM-агент із власним system prompt-ом (детальніше — у [notes.md](notes.md))
+- Готує приватний снапшот контакту: ім'я, нотатка, існуючі теги, місяць народження, телефон у замаскованому форматі (`+XXX*****`)
+- LLM повертає до 5 нових тегів JSON-ом (1-2 слова, lowercase, без пунктуації)
+- Сервіс чистить результат: дедуплікує, прибирає вже існуючі теги, обрізає до 5
+- Користувач бачить контакт + інлайн-поле з об'єднанням `існуючі + запропоновані` → редагує → `Enter` зберігає, `Esc` скасовує
+- Fallback: без `prompt_toolkit` або при помилці AI — повертається `SUGGEST_TAGS_FAILED`, користувач може застосувати `edit-tags` вручну
+
+**Інтерактивні резолвери введення** (`src/assistant_t800/interfaces/cli/edit_resolvers.py`)
+Перехоплюють введення до того, як його побачить диспетчер команд:
+- `NoteEditResolver` — багаторядковий редактор нотаток
+- `TagEditResolver` — інлайн-редактор тегів для `edit-tags`
+- `SuggestTagsResolver` — виклик AI + інлайн-редактор для `suggest-tags`
 
 ### Валідація полів (`src/assistant_t800/domain/fields.py`, `domain/phone_validation.py`, `domain/country.py`)
 
