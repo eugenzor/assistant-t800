@@ -454,3 +454,63 @@ def test_merge_values_returns_empty_tuple_for_no_inputs():
     result = ContactsService._merge_values(None, ())
 
     assert result == ()
+
+
+# ---------- set_tags_from_text / clear_tags ----------
+
+
+def test_set_tags_from_text_replaces_existing_tags(service):
+    service.add_contact("John Smith")
+    service.set_tags_from_text("John Smith", "old, work")
+
+    contact = service.set_tags_from_text("John Smith", "Family, USA")
+
+    assert contact.tags == {"family", "usa"}
+
+
+def test_set_tags_from_text_splits_by_all_multi_value_separators(service):
+    service.add_contact("Іван")
+
+    contact = service.set_tags_from_text("Іван", "робота;Important, США")
+
+    assert contact.tags == {"робота", "important", "сша"}
+
+
+def test_set_tags_from_text_ignores_empty_tags(service):
+    service.add_contact("Іван")
+
+    contact = service.set_tags_from_text("Іван", ", робота,   ,")
+
+    assert contact.tags == {"робота"}
+
+
+def test_parse_tags_uses_system_value_separators():
+    result = ContactsService.parse_tags(" work; USA, friends ")
+
+    assert result == ("work", "USA", "friends")
+
+
+def test_format_tags_uses_first_system_separator(service):
+    service.add_contact("John Smith")
+    contact = service.set_tags_from_text("John Smith", "work, usa")
+
+    assert service.format_tags(contact.tags) == "usa; work"
+
+
+def test_clear_tags_removes_all_tags(service):
+    service.add_contact("John Smith")
+    service.set_tags_from_text("John Smith", "work, important")
+
+    contact = service.clear_tags("John Smith")
+
+    assert contact.tags == set()
+
+
+def test_set_tags_from_text_raises_for_missing_contact(service):
+    with pytest.raises(KeyError):
+        service.set_tags_from_text("Unknown", "work")
+
+
+def test_clear_tags_raises_for_missing_contact(service):
+    with pytest.raises(KeyError):
+        service.clear_tags("Unknown")

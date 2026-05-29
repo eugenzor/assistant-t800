@@ -53,9 +53,13 @@ def _build_cli_runner(repository: ContactsRepository) -> CliRunner:
     presenter = create_cli_presenter()
 
     CLI_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
-    input_factory = InputFactory(history_file=CLI_HISTORY_FILE)
-    input_func = input_factory.create(registry)
-    note_input_func = input_factory.create_note_input()
+    input_factory = InputFactory()
+    input_func = input_factory.create_base(
+        completion_words=sorted({command.name for command in registry.values()}),
+        history_file=CLI_HISTORY_FILE,
+    )
+    editable_func = input_factory.create_editable()
+    text_input_func = input_factory.create_text()
 
     suggestion_registry = SuggestionCommandRegistry.from_mapping(registry)
     suggestion_service = SuggestionService(suggestion_registry)
@@ -64,7 +68,8 @@ def _build_cli_runner(repository: ContactsRepository) -> CliRunner:
         dispatcher=dispatcher,
         presenter=presenter,
         input_func=input_func,
-        note_input_func=note_input_func,
+        editable_func=editable_func,
+        text_input_func=text_input_func,
         suggestion_service=suggestion_service,
         force_suggestion_confirm=False,
         force_removal_confirm=True,

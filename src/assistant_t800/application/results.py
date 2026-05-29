@@ -1,12 +1,22 @@
 """Structured application results."""
 
 from dataclasses import dataclass, field
+from enum import StrEnum, auto
 from typing import TypeAlias
 
 from assistant_t800.localization import ErrorCode, Message
 
 MessageParams: TypeAlias = dict[str, object]
 MessageKey: TypeAlias = Message | ErrorCode
+
+
+class ResultStatus(StrEnum):
+    """Application result status."""
+
+    SUCCESS = auto()
+    INFO = auto()
+    WARNING = auto()
+    ERROR = auto()
 
 
 @dataclass(frozen=True)
@@ -33,6 +43,7 @@ class AppResult:
     data: object | None = None
     should_exit: bool = False
     confirmation: AppConfirmation | None = None
+    status: ResultStatus = ResultStatus.SUCCESS
 
     @property
     def requires_confirmation(self) -> bool:
@@ -55,6 +66,7 @@ class AppResult:
             message=message,
             data=data,
             should_exit=should_exit,
+            status=ResultStatus.SUCCESS,
         )
 
         return result
@@ -63,12 +75,52 @@ class AppResult:
     def fail(
         cls,
         code: ErrorCode,
+        *,
+        data: object | None = None,
         **params: object,
     ) -> "AppResult":
         """Build a failed result."""
         result = cls(
             success=False,
             message=AppMessage(code, params),
+            data=data,
+            status=ResultStatus.ERROR,
+        )
+
+        return result
+
+    @classmethod
+    def info(
+        cls,
+        code: Message | ErrorCode,
+        *,
+        data: object | None = None,
+        **params: object,
+    ) -> "AppResult":
+        """Build informational result."""
+        result = cls(
+            success=False,
+            message=AppMessage(code, params),
+            data=data,
+            status=ResultStatus.INFO,
+        )
+
+        return result
+
+    @classmethod
+    def warning(
+        cls,
+        code: Message | ErrorCode,
+        *,
+        data: object | None = None,
+        **params: object,
+    ) -> "AppResult":
+        """Build warning result."""
+        result = cls(
+            success=False,
+            message=AppMessage(code, params),
+            data=data,
+            status=ResultStatus.WARNING,
         )
 
         return result
@@ -81,6 +133,7 @@ class AppResult:
             success=False,
             message=message,
             confirmation=AppConfirmation(message=message),
+            status=ResultStatus.WARNING,
         )
 
         return result

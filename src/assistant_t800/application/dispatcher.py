@@ -40,11 +40,13 @@ class CommandDispatcher:
 
     def _parse_input(self, raw_input: str) -> tuple[Command, list[str]]:
         """Split raw command line and resolve the longest matching command prefix."""
+        normalized_input = raw_input.strip().strip("\\/")
+
         try:
-            parts = shlex.split(raw_input)
+            parts = shlex.split(normalized_input)
         except ValueError as error:
             raise CommandError(
-                ErrorCode.INVALID_COMMAND_SYNTAX,
+                ErrorCode.INVALID_QUOTES_SYNTAX,
                 reason=str(error),
             ) from error
 

@@ -1,8 +1,11 @@
 """Contact management service layer."""
 
+import re
+
 from collections.abc import Sequence
 from typing import Optional
 
+from assistant_t800.application.enums import SystemValue
 from assistant_t800.domain.birthdays import BirthdaysListContact
 from assistant_t800.domain.contacts import Contact
 from assistant_t800.domain.fields import Name
@@ -133,23 +136,37 @@ class ContactsService:
 
         return contact
 
-    def add_tags(self, name: str, tags: Sequence[str]) -> Contact:
-        """Add tags to an existing contact."""
+    def set_tags_from_text(self, name: str, raw_tags: str) -> Contact:
+        """Replace contact tags parsed from user text."""
         contact = self.get_contact(name)
-
-        for tag in tags:
-            contact.add_tag(tag)
+        contact.set_tags(self.parse_tags(raw_tags))
 
         return contact
 
-    def remove_tags(self, name: str, tags: Sequence[str]) -> Contact:
-        """Remove tags from an existing contact."""
+    def clear_tags(self, name: str) -> Contact:
+        """Remove all contact tags."""
         contact = self.get_contact(name)
-
-        for tag in tags:
-            contact.remove_tag(tag)
+        contact.clear_tags()
 
         return contact
+
+    @classmethod
+    def parse_tags(cls, raw_tags: str) -> tuple[str, ...]:
+        """Parse user tag text by configured multi-value separators."""
+        pattern = f"[{re.escape(SystemValue.MULTI_VALUE_SEPARATORS.value)}]"
+        result = tuple(
+            tag.strip() for tag in re.split(pattern, raw_tags) if tag.strip()
+        )
+
+        return result
+
+    @staticmethod
+    def format_tags(tags: set[str]) -> str:
+        """Format tags for inline editing using the canonical separator."""
+        separator = f"{SystemValue.MULTI_VALUE_SEPARATORS.value[0]} "
+        result = separator.join(sorted(tags))
+
+        return result
 
     def remove_contact(self, name: str) -> Contact:
         """Remove a contact from storage."""

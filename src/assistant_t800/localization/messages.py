@@ -2,12 +2,24 @@
 
 from enum import auto, Enum
 from importlib.metadata import PackageNotFoundError, version
+from typing import Final
+
 from assistant_t800.localization.multilang import MultiLang
 
 try:
     APP_VERSION = version("assistant-t800")
 except PackageNotFoundError:
     APP_VERSION = "1.0.0"
+
+ASCII_APP_LOGO: Final[str] = r"""       ______   
+     <((((((\\\ 
+     /      . }\
+     ;--..--._|}
+     '--/\--'  )
+     | '-'  :'| 
+     . -==- .-| 
+      \.__.'    
+                """
 
 
 class MultiLangEnum(Enum):
@@ -43,6 +55,7 @@ class Message(MultiLangEnum):
     """Localized application and UI messages."""
 
     PROMPT = auto()
+    EDITABLE_PROMPT = auto()
     YES = auto()
     NO = auto()
 
@@ -56,11 +69,17 @@ class Message(MultiLangEnum):
     WELCOME_HELP_HINT = auto()
     GOOD_BYE = auto()
     HELP = auto()
+    HELP_CONTACTS = auto()
+    HELP_NOTES = auto()
+    HELP_BIRTHDAYS = auto()
+    HELP_OTHER = auto()
+
     COMMAND_SUGGESTION_CONFIRM = auto()
     COMMAND_SUGGESTION_RUN = auto()
 
     CONTACT_ADDED = auto()
     CONTACT_UPDATED = auto()
+    CONTACT_TAGS_UPDATED = auto()
     CONTACT_FOUND = auto()
     CONTACTS_FOUND = auto()
     CONTACTS_LISTED = auto()
@@ -76,7 +95,7 @@ class Message(MultiLangEnum):
     CONFIRM_REMOVE_NOTE = auto()
     CONFIRM_REMOVE_PHONE = auto()
     CONFIRM_REMOVE_EMAIL = auto()
-    CONFIRM_REMOVE_TAG = auto()
+    CONFIRM_REMOVE_TAGS = auto()
     CONFIRM_REMOVE_ALL_PHONES = auto()
     CONFIRM_REMOVE_ALL_EMAILS = auto()
     CONFIRM_SUFFIX = auto()
@@ -86,15 +105,15 @@ class Message(MultiLangEnum):
     REMOVED_NOTE = auto()
     REMOVED_PHONE = auto()
     REMOVED_EMAIL = auto()
-    REMOVED_TAG = auto()
+    REMOVED_TAGS = auto()
 
     NO_CONTACTS = auto()
     USE_QUOTES_HINT = auto()
     BIRTHDAY_ONCE_HINT = auto()
 
     CONTACT_NAME = auto()
-    CONTACT_PHONES = auto()
-    CONTACT_EMAILS = auto()
+    CONTACT_PHONE = auto()
+    CONTACT_EMAIL = auto()
     CONTACT_ADDRESS = auto()
     CONTACT_BIRTHDAY = auto()
     CONTACT_NOTE = auto()
@@ -122,9 +141,12 @@ class Message(MultiLangEnum):
     REMOVE_PHONE_DESCRIPTION = auto()
     REMOVE_EMAIL_DESCRIPTION = auto()
     EDIT_NOTE_DESCRIPTION = auto()
+    EDIT_NOTE_INPUT_TITLE = auto()
+    EDIT_NOTE_INPUT_HINT = auto()
+    EDIT_NOTE_INPUT_PROMPT = auto()
     REMOVE_NOTE_DESCRIPTION = auto()
-    ADD_TAG_DESCRIPTION = auto()
-    REMOVE_TAG_DESCRIPTION = auto()
+    EDIT_TAGS_DESCRIPTION = auto()
+    EDIT_TAGS_INPUT_HINT = auto()
 
 
 class ErrorCode(MultiLangEnum):
@@ -134,6 +156,7 @@ class ErrorCode(MultiLangEnum):
     UNKNOWN_COMMAND = auto()
     EMPTY_COMMAND = auto()
     INVALID_COMMAND_SYNTAX = auto()
+    INVALID_QUOTES_SYNTAX = auto()
     COMMAND_PARSE_ERROR = auto()
 
     MISSING_ARGUMENTS = auto()
@@ -142,6 +165,13 @@ class ErrorCode(MultiLangEnum):
 
     VALIDATION_ERROR = auto()
     CONTACT_NOT_FOUND = auto()
+    CONTACTS_NOT_FOUND = auto()
+    NAME_NOT_FOUND = auto()
+    QUERY_NOT_FOUND = auto()
+    EMAIL_NOT_FOUND = auto()
+    PHONE_NOT_FOUND = auto()
+    TAG_NOT_FOUND = auto()
+    NOTE_NOT_FOUND = auto()
     CONTACT_ALREADY_EXISTS = auto()
     CONTACT_VALUE_NOT_FOUND = auto()
     CONTACT_FIELD_EMPTY = auto()
