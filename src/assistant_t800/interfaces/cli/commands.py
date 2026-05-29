@@ -27,6 +27,7 @@ from assistant_t800.application.handlers import (
     set_address,
     set_birthday,
     show_help,
+    suggest_tags,
 )
 
 
@@ -314,6 +315,22 @@ def build_registry() -> dict[str, Command]:
                 "увше ефпі",
                 "редагуй теги",
                 "зміни теги",
+            ),
+        ),
+        Command(
+            name="suggest-tags",
+            handler=suggest_tags,
+            description=Message.SUGGEST_TAGS_DESCRIPTION,
+            args=("name",),
+            aliases=(
+                "ігппуіе-ефпі",
+                "suggest tags",
+                "ігппуіе ефпі",
+                "запропонуй теги",
+                "ai-tag",
+                "фш-ефп",
+                "ai tag",
+                "фш ефп",
             ),
         ),
     )
