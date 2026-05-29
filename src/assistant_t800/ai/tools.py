@@ -362,36 +362,35 @@ def remove_note(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
     )
 
 
-def add_tags(ctx: RunContext[AgentDeps], name: str, tags: list[str]) -> ToolReturn[str]:
-    """Add one or more tags to an existing contact."""
-    if not tags or not any(tag.strip() for tag in tags):
-        return _fail("Не вдалося додати теги: тег не може бути порожнім.")
+def set_tags_from_text(
+    ctx: RunContext[AgentDeps], name: str, tags: str
+) -> ToolReturn[str]:
+    """Replace all tags on an existing contact from comma/semicolon-separated text.
 
+    Tags are separated by ``;`` or ``,``. Empty or whitespace-only text clears
+    all tags. To add or remove individual tags, read current tags first, then
+    pass the full desired tag list.
+    """
     try:
-        ctx.deps.contacts_service.add_tags(name, tags)
+        ctx.deps.contacts_service.set_tags_from_text(name, tags)
     except (KeyError, ValueError) as exc:
-        return _fail(f"Не вдалося додати теги: {exc}")
+        return _fail(f"Не вдалося встановити теги: {exc}")
 
     return _ok(
-        f"Теги додано до контакту «{name}»: {len(tags)}.",
+        f"Теги контакту «{name}» оновлено.",
         _contacts_display(ctx.deps.contacts_service.list_contacts()),
     )
 
 
-def remove_tags(
-    ctx: RunContext[AgentDeps], name: str, tags: list[str]
-) -> ToolReturn[str]:
-    """Remove one or more tags from an existing contact."""
-    if not tags or not any(tag.strip() for tag in tags):
-        return _fail("Не вдалося видалити теги: тег не може бути порожнім.")
-
+def clear_tags(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
+    """Remove all tags from an existing contact."""
     try:
-        ctx.deps.contacts_service.remove_tags(name, tags)
+        ctx.deps.contacts_service.clear_tags(name)
     except (KeyError, ValueError) as exc:
-        return _fail(f"Не вдалося видалити теги: {exc}")
+        return _fail(f"Не вдалося очистити теги: {exc}")
 
     return _ok(
-        f"Теги видалено у контакту «{name}»: {len(tags)}.",
+        f"Усі теги контакту «{name}» видалено.",
         _contacts_display(ctx.deps.contacts_service.list_contacts()),
     )
 

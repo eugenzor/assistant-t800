@@ -1,36 +1,3 @@
-FIXME
-● Reviewed the AI module. Here's my validation of the print tool idea.
-
-  Current state
-
-  - Tools return ToolReturn(metadata=DisplayPayload(...)). apply_display extracts the last payload from the run and routes it to Presenter.refresh_contacts / refresh_birthdays / print.
-  - Presenter.print(text) and DisplayPayload(kind="text", text=...) already exist (deps.py:24, results.py:14, display.py:37-39, presenter.py:28-30, 83-86) — but no tool currently emits a text payload, so this branch is dead code today.
-  - The display always renders fixed, hard-coded layouts in _render_contacts / _render_birthdays. The fields parameter on read tools only trims what's sent to the LLM (formatting.py), not what the panel shows.
-
-  Verdict: the idea is valid, with caveats
-
-  Pros
-  - Half the plumbing is already in place — adding a print tool is ~10 lines + a system-prompt rule.
-  - Solves the actual gap: arbitrary per-request views ("just names and phones", "group by tag", "as a phonebook").
-  - Plays to LLM strengths (formatting text).
-
-  Risks to weigh
-  1. Hallucination / integrity loss. Today the display path serializes domain objects directly — the panel cannot lie. With print, the LLM retypes data and can drop digits in a phone, misspell a name, omit a row, etc. The structured path's strongest guarantee disappears.
-  2. Visual inconsistency. _render_contacts uses Textual markup ([bold], [dim]). LLM-generated text won't match unless the prompt teaches it — and even then, output will drift between runs.
-  3. Tokens & latency. To "print" 50 contacts the model must re-emit every value as output tokens. Structured payloads cost zero output tokens for the display.
-  4. Two overlapping paths. Without crisp rules the model will pick print vs list_contacts arbitrarily. The system prompt currently says "Панель оновлюється автоматично після виконання інструментів — не потрібно окремо викликати інструменти лише для оновлення панелі" (agent.py:84-85) — that rule
-  directly fights print. It would need rewriting.
-
-  Recommendation
-
-  Add it, but as a fallback, not the default. Two-layer approach works best:
-
-  - First, extend DisplayPayload(kind="contacts") with an optional display_fields: frozenset[str] | None and teach _render_contacts to honor it. The existing read tools gain a display_fields arg the LLM passes for "show only names and phones" — structured, no hallucination, cheap.
-  - Then add print(text) for genuinely free-form requests ("show as a CSV", "group by tag with counts") that the structured path can't express. System prompt: prefer structured tools; use print only when the user asks for a custom layout.
-
-  Want me to sketch the implementation for either or both?
-
-
 # Assistant T800
 
 Assistant T800 is a Python 3.13+ personal assistant for managing contacts from the terminal.
