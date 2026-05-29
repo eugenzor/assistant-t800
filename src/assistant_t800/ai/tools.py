@@ -19,6 +19,7 @@ from assistant_t800.ai.utils import (
 )
 from assistant_t800.ai.results import DisplayPayload
 from assistant_t800.domain.contacts import Contact, ContactField
+from assistant_t800.services.contacts import ContactsService
 
 
 def _ok(message: str, display: DisplayPayload | None = None) -> ToolReturn[str]:
@@ -34,6 +35,17 @@ def _fail(message: str) -> ToolReturn[str]:
 def _contacts_display(contacts: list) -> DisplayPayload:
     """Build a contacts display payload."""
     return DisplayPayload(kind="contacts", contacts=contacts)
+
+
+def _contact_display(contact: Contact) -> DisplayPayload:
+    """Build a single-contact card display payload."""
+    return DisplayPayload(kind="contact", contact=contact)
+
+
+def _mutated_contact_display(service: ContactsService, name: str) -> DisplayPayload:
+    """Build card payload for the contact affected by a mutation."""
+    contact = service.get_contact(name)
+    return _contact_display(contact)
 
 
 def _contacts_llm_message(
@@ -90,7 +102,7 @@ def add_contact(
 
     return _ok(
         f"Контакт «{contact.name.value}» додано.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _contact_display(contact),
     )
 
 
@@ -110,11 +122,14 @@ def get_contact(
     except KeyError as exc:
         return _fail(f"Контакт не знайдено: {exc}")
 
-    return _contacts_read_result(
-        [contact],
-        header=f"Контакт «{contact.name.value}»:",
-        empty_message="",
-        fields=fields,
+    resolved = resolve_contact_fields(coalesce_read_fields(fields))
+    return _ok(
+        _contacts_llm_message(
+            f"Контакт «{contact.name.value}»:",
+            [contact],
+            fields=resolved,
+        ),
+        _contact_display(contact),
     )
 
 
@@ -284,7 +299,7 @@ def set_address(ctx: RunContext[AgentDeps], name: str, address: str) -> ToolRetu
 
     return _ok(
         f"Адресу контакту «{name}» оновлено.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -299,7 +314,7 @@ def set_birthday(
 
     return _ok(
         f"День народження контакту «{name}» оновлено.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -314,7 +329,7 @@ def add_phones(
 
     return _ok(
         f"Телефони додано до контакту «{name}»: {len(phones)}.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -329,7 +344,7 @@ def add_emails(
 
     return _ok(
         f"E-mail додано до контакту «{name}»: {len(emails)}.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -345,7 +360,7 @@ def set_note(ctx: RunContext[AgentDeps], name: str, note: str) -> ToolReturn[str
 
     return _ok(
         f"Нотатку контакту «{name}» оновлено.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -358,7 +373,7 @@ def remove_note(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
 
     return _ok(
         f"Нотатку контакту «{name}» видалено.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -378,7 +393,7 @@ def set_tags_from_text(
 
     return _ok(
         f"Теги контакту «{name}» оновлено.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -391,7 +406,7 @@ def clear_tags(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
 
     return _ok(
         f"Усі теги контакту «{name}» видалено.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -417,7 +432,7 @@ def remove_address(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
 
     return _ok(
         f"Адресу контакту «{name}» видалено.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -430,7 +445,7 @@ def remove_birthday(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
 
     return _ok(
         f"День народження контакту «{name}» видалено.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -445,7 +460,7 @@ def remove_phones(
 
     return _ok(
         f"Телефони видалено у контакту «{name}»: {len(phones)}.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -458,7 +473,7 @@ def remove_all_phones(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
 
     return _ok(
         f"Усі телефони контакту «{name}» видалено.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -473,7 +488,7 @@ def remove_emails(
 
     return _ok(
         f"E-mail видалено у контакту «{name}»: {len(emails)}.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -486,5 +501,5 @@ def remove_all_emails(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
 
     return _ok(
         f"Усі e-mail контакту «{name}» видалено.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )

@@ -22,6 +22,14 @@ def _contacts(result) -> list:
     return result.metadata.contacts
 
 
+def _contact(result):
+    """Return a single contact from a card display payload."""
+    assert isinstance(result.metadata, DisplayPayload)
+    assert result.metadata.kind == "contact"
+    assert result.metadata.contact is not None
+    return result.metadata.contact
+
+
 def _birthdays(result) -> list:
     """Return birthday records from a tool result display payload."""
     assert isinstance(result.metadata, DisplayPayload)
@@ -45,7 +53,7 @@ def test_add_contact_creates_contact_and_returns_display(ctx, service, presenter
     assert [p.value for p in contact.phones] == ["0501234567"]
     assert [e.value for e in contact.emails] == ["ivan@example.com"]
     assert presenter.refresh_calls == []
-    assert [c.name.value for c in _contacts(result)] == ["Іван"]
+    assert _contact(result).name.value == "Іван"
 
 
 def test_add_contact_invalid_phone_leaves_state_untouched(ctx, service, presenter):
@@ -81,7 +89,7 @@ def test_get_contact_returns_single_contact_display(ctx, service, presenter):
     result = tools.get_contact(ctx, "Іван")
 
     assert presenter.refresh_calls == []
-    assert [c.name.value for c in _contacts(result)] == ["Іван"]
+    assert _contact(result).name.value == "Іван"
 
 
 def test_get_contact_missing_has_no_display(ctx, presenter):
@@ -235,7 +243,7 @@ def test_set_address_updates_value(ctx, service, presenter):
 
     assert service.get_contact("Іван").address.value == "Київ, Хрещатик 1"
     assert presenter.refresh_calls == []
-    assert len(_contacts(result)) == 1
+    assert _contact(result).name.value == "Іван"
 
 
 def test_set_address_missing_contact_leaves_state_untouched(ctx, service, presenter):
@@ -297,7 +305,7 @@ def test_set_note_updates_value(ctx, service, presenter):
 
     assert service.get_contact("Іван").note == "важливий клієнт"
     assert presenter.refresh_calls == []
-    assert [c.name.value for c in _contacts(result)] == ["Іван"]
+    assert _contact(result).name.value == "Іван"
 
 
 def test_set_note_replaces_existing_note(ctx, service):
@@ -346,7 +354,7 @@ def test_remove_note_clears_value(ctx, service, presenter):
 
     assert service.get_contact("Іван").note == SystemValue.EMPTY_TEXT.value
     assert presenter.refresh_calls == []
-    assert [c.name.value for c in _contacts(result)] == ["Іван"]
+    assert _contact(result).name.value == "Іван"
 
 
 def test_remove_note_missing_contact_leaves_state_untouched(ctx, service, presenter):
@@ -368,7 +376,7 @@ def test_add_phones_appends_multiple(ctx, service, presenter):
     phones = [item.value for item in service.get_contact("Іван").phones]
     assert phones == ["0501112233", "0509998877"]
     assert presenter.refresh_calls == []
-    assert len(_contacts(result)) == 1
+    assert _contact(result).name.value == "Іван"
 
 
 def test_add_phones_invalid_value_leaves_state_untouched(ctx, service, presenter):
@@ -486,7 +494,7 @@ def test_remove_phones_removes_listed_values(ctx, service, presenter):
     remaining = [item.value for item in service.get_contact("Іван").phones]
     assert remaining == ["0509998877"]
     assert presenter.refresh_calls == []
-    assert len(_contacts(result)) == 1
+    assert _contact(result).name.value == "Іван"
 
 
 def test_remove_phones_unknown_phone_leaves_state_untouched(ctx, service, presenter):
@@ -589,7 +597,7 @@ def test_set_tags_from_text_replaces_tags(ctx, service, presenter):
     tags = service.get_contact("Іван").tags
     assert tags == {"робота", "vip"}
     assert presenter.refresh_calls == []
-    assert len(_contacts(result)) == 1
+    assert _contact(result).name.value == "Іван"
 
 
 def test_set_tags_from_text_replaces_existing(ctx, service, presenter):
@@ -600,7 +608,7 @@ def test_set_tags_from_text_replaces_existing(ctx, service, presenter):
 
     assert service.get_contact("Іван").tags == {"new"}
     assert presenter.refresh_calls == []
-    assert len(_contacts(result)) == 1
+    assert _contact(result).name.value == "Іван"
 
 
 def test_set_tags_from_text_parses_separators(ctx, service, presenter):
@@ -610,7 +618,7 @@ def test_set_tags_from_text_parses_separators(ctx, service, presenter):
 
     assert service.get_contact("Іван").tags == {"робота", "vip"}
     assert presenter.refresh_calls == []
-    assert len(_contacts(result)) == 1
+    assert _contact(result).name.value == "Іван"
 
 
 def test_set_tags_from_text_empty_clears_tags(ctx, service, presenter):
@@ -621,7 +629,7 @@ def test_set_tags_from_text_empty_clears_tags(ctx, service, presenter):
 
     assert service.get_contact("Іван").tags == set()
     assert presenter.refresh_calls == []
-    assert len(_contacts(result)) == 1
+    assert _contact(result).name.value == "Іван"
 
 
 def test_set_tags_from_text_missing_contact_leaves_state_untouched(
@@ -645,7 +653,7 @@ def test_clear_tags_removes_all(ctx, service, presenter):
 
     assert service.get_contact("Іван").tags == set()
     assert presenter.refresh_calls == []
-    assert len(_contacts(result)) == 1
+    assert _contact(result).name.value == "Іван"
 
 
 def test_clear_tags_missing_contact_leaves_state_untouched(ctx, service, presenter):

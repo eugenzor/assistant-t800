@@ -1,11 +1,14 @@
 """Textual presenter implementation for the AI agent."""
 
+from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
 from textual.widgets import RichLog
 
 from assistant_t800.domain.birthdays import BirthdaysListContact
 from assistant_t800.domain.contacts import Contact
 from assistant_t800.interfaces.cli.metrics import get_actual_width
+from assistant_t800.interfaces.rich.contact_card import build_contact_panel
 from assistant_t800.interfaces.rich.contacts import build_contacts_table
 from assistant_t800.localization import Message
 
@@ -22,6 +25,10 @@ class TextualPresenter:
         """Render contacts in the display panel."""
         # Tool calls may run from a worker thread, so UI updates must be proxied.
         self._app.call_from_thread(self._render_contacts, contacts)
+
+    def refresh_contact(self, contact: Contact) -> None:
+        """Render one contact as a card in the display panel."""
+        self._app.call_from_thread(self._render_contact, contact)
 
     def refresh_birthdays(self, birthdays: list[BirthdaysListContact]) -> None:
         """Render upcoming birthdays in the display panel."""
@@ -42,6 +49,19 @@ class TextualPresenter:
             build_contacts_table(
                 table_cls=Table,
                 contacts=contacts,
+                width=self._display_table_width(),
+            ),
+            expand=False,
+        )
+
+    def _render_contact(self, contact: Contact) -> None:
+        """Render one contact card into the display log."""
+        self._log.clear()
+        self._log.write(
+            build_contact_panel(
+                panel_cls=Panel,
+                text_cls=Text,
+                contact=contact,
                 width=self._display_table_width(),
             ),
             expand=False,

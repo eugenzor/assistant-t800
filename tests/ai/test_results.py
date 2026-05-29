@@ -16,6 +16,19 @@ def test_display_payload_contacts_kind_holds_contact_list():
 
     assert payload.kind == "contacts"
     assert payload.contacts == [contact]
+    assert payload.contact is None
+    assert payload.birthdays is None
+    assert payload.text is None
+
+
+def test_display_payload_contact_kind_holds_single_contact():
+    contact = Contact(Name("Іван"))
+
+    payload = DisplayPayload(kind="contact", contact=contact)
+
+    assert payload.kind == "contact"
+    assert payload.contact == contact
+    assert payload.contacts is None
     assert payload.birthdays is None
     assert payload.text is None
 
