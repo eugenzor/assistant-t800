@@ -126,6 +126,20 @@ domain → repositories → services → application → interfaces (CLI / TUI)
 
 **Теги:** повноцінно підтримуються. Зберігаються нормалізованими (lowercase, без дублікатів), доступні через `search-tag`, керуються через `edit-tags` (ручне інлайн-редагування) і `suggest-tags` (AI). Окремих `add-tag` / `remove-tag` команд немає — все робиться через `edit-tags`.
 
+### AI-функціонал
+
+**Підказки команд** (`src/assistant_t800/suggestions/`)
+1. Точна відповідність (ім'я команди або аліас)
+2. Fuzzy-match через `rapidfuzz` (толерантність до опечаток)
+3. Якщо score < 80 — AI-fallback (Gemini вгадує намір)
+
+**AI-чат у TUI** (`src/assistant_t800/ai/agent.py`)
+- Модель: Gemini 3.1 Flash Lite
+- Персона: «Арні» — кібернетичний асистент у стилі T-800
+- Інструменти 1:1 до методів `ContactsService` (`src/assistant_t800/ai/tools.py`)
+- Історія діалогу з лімітом (за замовчуванням 10 повідомлень)
+- Двопанельний UI: 70% контакти + 30% чат
+
 ### Валідація полів (`src/assistant_t800/domain/fields.py`, `domain/phone_validation.py`, `domain/country.py`)
 
 | Поле | Правила |
