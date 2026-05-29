@@ -9,7 +9,9 @@ import pytest
 
 from assistant_t800.ai import tools
 from assistant_t800.ai.results import DisplayPayload
+from assistant_t800.config import settings
 from assistant_t800.domain.birthdays import BirthdaysListContact
+from assistant_t800.domain.contacts import ContactField
 
 
 def _contacts(result) -> list:
@@ -652,3 +654,115 @@ def test_remove_tags_empty_value_is_rejected(ctx, service, presenter):
     assert service.get_contact("Іван").tags == {"робота"}
     assert presenter.refresh_calls == []
     assert result.metadata is None
+
+
+# ---------- LLM return_value summaries ----------
+
+
+def test_get_contact_return_value_includes_contact_details(ctx, service):
+    tools.add_contact(ctx, "Іван", phone="0501234567", birthday="15.12.1990")
+
+    result = tools.get_contact(ctx, "Іван", fields=list(ContactField))
+
+    assert "Іван" in result.return_value
+    assert "0501234567" in result.return_value
+    assert "15.12.1990" in result.return_value
+
+
+def test_get_contact_default_fields_returns_name_only(ctx, service):
+    tools.add_contact(ctx, "Іван", phone="0501234567", birthday="15.12.1990")
+
+    result = tools.get_contact(ctx, "Іван")
+
+    assert '"name": "Іван"' in result.return_value
+    assert "0501234567" not in result.return_value
+    assert "15.12.1990" not in result.return_value
+
+
+def test_list_contacts_return_value_includes_all_contacts(ctx, service):
+    tools.add_contact(ctx, "Іван")
+    tools.add_contact(ctx, "Олена", birthday="03.01.1988")
+
+    result = tools.list_contacts(ctx, fields=list(ContactField))
+
+    assert '"name": "Іван"' in result.return_value
+    assert '"name": "Олена"' in result.return_value
+    assert "03.01.1988" in result.return_value
+
+
+def test_list_contacts_return_value_truncates_when_over_cap(ctx, monkeypatch):
+    monkeypatch.setattr(settings, "max_contacts_in_tool_return", 2)
+    for index in range(3):
+        tools.add_contact(ctx, f"Contact{index}")
+
+    result = tools.list_contacts(ctx)
+
+    assert "Contact0" in result.return_value
+    assert "Contact1" in result.return_value
+    assert "Contact2" not in result.return_value
+    assert "Ще 1 контакт не показано" in result.return_value
+
+
+def test_search_contacts_return_value_includes_match_details(ctx):
+    tools.add_contact(ctx, "Іван", phone="0501234567")
+
+    result = tools.search_contacts(
+        ctx,
+        "0501234567",
+        fields=[ContactField.NAME, ContactField.PHONES],
+    )
+
+    assert "Іван" in result.return_value
+    assert '"phones": ["0501234567"]' in result.return_value
+
+
+def test_search_upcoming_birthdays_return_value_includes_records(ctx, monkeypatch):
+    fake = [
+        BirthdaysListContact(
+            name="Іван",
+            birthday="26.05.1990",
+            age="36",
+            congratulation_date="26.05.2026",
+        )
+    ]
+    monkeypatch.setattr(
+        ctx.deps.contacts_service,
+        "search_upcoming_birthdays",
+        lambda days=7: fake,
+    )
+
+    result = tools.search_upcoming_birthdays(ctx, days=10)
+
+    assert "Іван" in result.return_value
+    assert "26.05.1990" in result.return_value
+    assert "26.05.2026" in result.return_value
+
+
+# ---------- fields parameter ----------
+
+
+def test_list_contacts_fields_limits_return_value(ctx):
+    tools.add_contact(ctx, "Іван", phone="0501234567", birthday="15.12.1990")
+
+    result = tools.list_contacts(ctx, fields=[ContactField.BIRTHDAY])
+
+    assert "15.12.1990" in result.return_value
+    assert "0501234567" not in result.return_value
+
+
+def test_get_contact_fields_limits_return_value(ctx):
+    tools.add_contact(ctx, "Іван", phone="0501234567", birthday="15.12.1990")
+
+    result = tools.get_contact(ctx, "Іван", fields=[ContactField.BIRTHDAY])
+
+    assert "15.12.1990" in result.return_value
+    assert "0501234567" not in result.return_value
+
+
+def test_search_contacts_fields_limits_return_value(ctx):
+    tools.add_contact(ctx, "Іван", phone="0501234567", email="ivan@example.com")
+
+    result = tools.search_contacts(ctx, "ivan", fields=[ContactField.EMAILS])
+
+    assert "ivan@example.com" in result.return_value
+    assert "0501234567" not in result.return_value

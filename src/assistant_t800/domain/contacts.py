@@ -4,10 +4,26 @@ The module defines the ``Contact`` entity and delegates field validation
 to dedicated domain field types.
 """
 
+from enum import StrEnum
 from typing import Optional
 
 from assistant_t800.application.enums import SystemValue
 from assistant_t800.domain.fields import Address, Birthday, Email, Name, Phone
+
+
+class ContactField(StrEnum):
+    """User-facing contact attribute names."""
+
+    NAME = "name"
+    PHONES = "phones"
+    EMAILS = "emails"
+    ADDRESS = "address"
+    BIRTHDAY = "birthday"
+    NOTE = "note"
+    TAGS = "tags"
+
+
+CONTACT_FIELD_NAMES: frozenset[str] = frozenset(field.value for field in ContactField)
 
 
 class Contact:
