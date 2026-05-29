@@ -90,6 +90,7 @@ domain → repositories → services → application → interfaces (CLI / TUI)
 | **storage** | Pickle-персистенс із відновленням після збоїв | `src/assistant_t800/storage/` |
 | **suggestions** | Fuzzy-match + AI-fallback для виправлення опечаток | `src/assistant_t800/suggestions/` |
 | **ai** | Pydantic-AI агент «Арні», інструменти, JSON-серіалізація контактів для LLM | `src/assistant_t800/ai/` |
+| **rich (presentation)** | Rich-компоненти (таблиця контактів, картка, привітання, статус), що використовуються і CLI, і TUI | `src/assistant_t800/interfaces/rich/` |
 | **info_validator** | Класифікація токенів (phone/email/birthday/address) з опційним AI-fallback | `src/assistant_t800/info_validator/` |
 
 ### Команди CLI
@@ -100,8 +101,8 @@ domain → repositories → services → application → interfaces (CLI / TUI)
 - `add "Іван Петренко" +380991234567 ivan@example.com country=UA city=Київ line="вул. Хрещатик, 1" 25.05.1990` — додати контакт
   - Телефон у форматі E.164 (`+380…`) або як 10 цифр національного формату (`0991234567`)
   - Адресу можна задати структуровано через `key=value` токени (`country=` / `city=` / `line=` / `zip=` / `region=`) або як одну строку (legacy fallback)
-- `contacts` — список усіх
-- `get "Іван Петренко"` — показати одного
+- `contacts` — список усіх (виводиться Rich-таблицею)
+- `get "Іван Петренко"` — показати картку одного контакту (Rich-панель)
 
 **Пошук (6 режимів)**
 - `search <текст>` — за всіма полями
@@ -140,6 +141,7 @@ domain → repositories → services → application → interfaces (CLI / TUI)
 - Історія діалогу з лімітом (за замовчуванням 10 повідомлень)
 - Двопанельний UI: 70% контакти + 30% чат
 - LLM бачить структуровані дані: усі read-інструменти повертають JSON через `ai/utils.py::format_contacts_for_llm` з обираними полями (`ContactField` enum) і капом за `max_items` (default 25, конфігурується)
+- Контакти й дні народження в Textual-панелі рендеряться тими ж Rich-компонентами, що і в CLI (`interfaces/rich/contacts.py`, `contact_card.py`)
 
 **AI-пропозиції тегів — `suggest-tags`** (`src/assistant_t800/ai/agent.py`, `services/contacts.py`)
 - Окремий one-shot LLM-агент із власним system prompt-ом (детальніше — у [notes.md](notes.md))
@@ -168,3 +170,72 @@ domain → repositories → services → application → interfaces (CLI / TUI)
 ### Універсальний валідатор токенів (`src/assistant_t800/info_validator/`)
 
 Окремий шар-фасад `InfoValidator`, який класифікує довільні рядки в `phone` / `email` / `birthday` / `address` / `unknown` за допомогою регекспів і опційного AI-fallback. Перший невпізнаний токен автоматично «промоутиться» в адресу. Поки що використовується як інфраструктура для розширення; основний парсинг команд (`add`, `set-address`) використовує деталізовані парсери в `application/contacts_args.py`.
+
+---
+
+## 3. Міні-презентація — що загалом можна робити
+
+> **Assistant T800** — термінальний помічник-«адресна книга» з AI-режимом «Арні» у стилі T-800.
+
+### Що це
+Python 3.13 CLI + Textual TUI для зберігання та пошуку контактів. Опційно підключається Google Gemini як AI-помічник і парсер опечаток.
+
+### Два режими роботи
+- **CLI** (`assistant-t800`) — класичний REPL з автодоповненням та історією. Працює без інтернету і без AI-ключа.
+- **TUI** (`assistant-t800 tui`) — Textual-застосунок із розділеним екраном: список контактів зліва, AI-чат справа. Потрібен `GOOGLE_API_KEY`.
+
+### Що вміє робити з контактами
+- Додавати / переглядати / видаляти
+- Зберігати телефони (E.164 + класифікація країни/оператора), email, **структуровану адресу** (country/city/line/zip/region), день народження, нотатку, теги
+- 6 видів пошуку (загальний + за name / phone / email / note / tag)
+- Показ найближчих днів народження з перенесенням вихідних на понеділок
+- Інлайн-редагування нотаток і тегів через `prompt_toolkit`
+- Rich-таблиця для списку та Rich-картка для одного контакту (responsive — звужується на вузьких терміналах)
+- Усі деструктивні операції — з підтвердженням
+
+### AI-фішки
+- **Опечатки розуміються автоматично:** спочатку fuzzy-match, потім Gemini як fallback
+- **Кирилиця QWERTY:** ввів `куьщму` замість `remove` — зрозуміє
+- **AI пропонує теги:** `suggest-tags <name>` — Gemini аналізує контакт (нотатку, ім'я, місяць народження тощо) і пропонує до 5 тегів; телефон передається замаскованим
+- **Чат у TUI бачить дані:** усі read-інструменти повертають JSON, тому «Арні» дійсно «бачить» контакти, а не вгадує
+- **AI керує тегами:** чат-агент тепер вміє і **встановлювати**, і **очищати** теги (`set_tags_from_text`, `clear_tags`) — мутації CRUD-полів і тегів через звичайний чат
+- **AI-розпізнавання телефонів:** якщо телефон у невідомому форматі, є опційний AI-класифікатор країни/оператора (`domain/phone_ai.py`)
+- **Підтримка української та англійської мов** для команд і повідомлень
+
+### Під капотом
+- Шарувата архітектура: domain → repo → service → application → interface
+- Pickle-сховище в `.data/address_book.pkl` (CLI і TUI ділять один файл)
+- `pydantic-settings` для конфігурації, `prompt_toolkit` для UX, `rapidfuzz` для fuzzy-пошуку
+- CI: ruff + pytest через GitHub Actions
+
+### Демо за 60 секунд
+
+```bash
+uv sync
+uv run assistant-t800
+> add "Іван Петренко" +380991112233 ivan@example.com country=UA city=Київ line="вул. Хрещатик, 1" 25.05.1990
+> contacts                          # Rich-таблиця
+> get "Іван Петренко"               # Rich-картка з тегами
+> birthdays 30
+> search-phone 099
+> edit-note "Іван Петренко" "Передзвонити після демо"
+> edit-tags "Іван Петренко"         # інлайн-поле для тегів
+> suggest-tags "Іван Петренко"      # AI підкаже теги (потрібен GOOGLE_API_KEY)
+> exit
+```
+
+---
+
+## Як переконатися, що все працює
+
+1. **Встановлення пройшло:** `uv sync` відпрацював без помилок, з'явилася тека `.venv/`
+2. **CLI стартує:** `uv run assistant-t800` показує привітання та запрошення вводу
+3. **Базовий CRUD:** `add "Test" +380991112233 country=UA city=Київ line="вул. Шевченка, 1"` → `contacts` → бачиш контакт у Rich-таблиці → `remove "Test"` → підтвердження → зник
+4. **Телефон зберігається в E.164:** `get "Test"` показує `+380991112233` навіть якщо вводив `0991112233`
+5. **Persistence:** перезапустити CLI, контакти на місці (файл `.data/address_book.pkl`)
+6. **TUI (якщо є `GOOGLE_API_KEY`):** `uv run assistant-t800 tui` відкриває двопанельний екран, AI-чат відповідає
+7. **AI-підказки команд:** введи `cintacts` — fuzzy запропонує `contacts`
+8. **Теги вручну:** `edit-tags "<name>"` відкриває інлайн-поле, можна редагувати
+9. **AI-теги (якщо є `GOOGLE_API_KEY`):** `suggest-tags "<name>"` повертає інлайн-поле з пропозиціями від Gemini
+10. **Тести:** `uv run pytest` — усі проходять
+11. **Лінтер:** `uv run ruff check .` без помилок
