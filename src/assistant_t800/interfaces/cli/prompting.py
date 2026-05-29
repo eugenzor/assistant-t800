@@ -1,178 +1,139 @@
-from pathlib import Path
-from typing import Callable
+"""CLI input factory."""
 
-from assistant_t800.application.commands import Command
+from pathlib import Path
+from typing import TypeVar, Sequence
+
+from assistant_t800.interfaces.cli.prompts.base_input import BaseInput, InputFunc
+from assistant_t800.interfaces.cli.prompts.editable_input import (
+    EditableInput,
+    EditableInputFunc,
+)
+from assistant_t800.interfaces.cli.prompts.platform import patch_windows_asyncio
+from assistant_t800.interfaces.cli.prompts.text_input import TextInput, TextInputFunc
+
+InputFunc = InputFunc
+EditableInputFunc = EditableInputFunc
+TextInputFunc = TextInputFunc
+PromptFunc = TypeVar("PromptFunc")
 
 
 class InputFactory:
-    """Create CLI input function with optional prompt_toolkit support."""
+    """Create CLI input functions with optional prompt_toolkit support."""
 
     def __init__(
         self,
-        history_file: str | Path = ".commands_history",
-        max_history_entries: int = 100,
         fallback_to_input: bool = True,
         show_fallback_reason: bool = False,
     ) -> None:
-        self.history_file = Path(history_file)
-        self.max_history_entries = max_history_entries
         self.fallback_to_input = fallback_to_input
         self.show_fallback_reason = show_fallback_reason
+        self._prompt_toolkit_error: Exception | None = None
+        self._prompt_toolkit_available = self._detect_prompt_toolkit()
 
-    def cleanup_history(self) -> None:
-        """Trim prompt_toolkit history file to the last max_history_entries commands."""
-        path = Path(self.history_file)
-
-        if not path.is_file():
-            return
-
-        lines = path.read_text(encoding="utf-8").splitlines()
-
-        entries: list[list[str]] = []
-        current: list[str] = []
-
-        for line in lines:
-            # Each history entry starts with a timestamp comment:
-            #   # 2026-05-10 20:50:26.159230
-            #   +command
-            if line.startswith("# "):
-                if current:
-                    entries.append(current)
-
-                current = [line]
-            elif current:
-                current.append(line)
-
-        if current:
-            entries.append(current)
-
-        if len(entries) > self.max_history_entries:
-            trimmed_entries = entries[-self.max_history_entries :]
-
-            content = "\n".join("\n".join(entry) for entry in trimmed_entries)
-
-            path.write_text(
-                f"\n{content}\n",
-                encoding="utf-8",
-                newline="\n",
-            )
-
-    def create(self, registry: dict[str, Command]) -> Callable[[str], str]:
-        """
-        Create interactive input function.
-
-        If prompt_toolkit is available, enables:
-        - persistent history
-        - command completion
-        - auto-suggestions
-
-        Falls back to standard input() otherwise.
-        """
-        result: Callable[[str], str] = input
-
-        import sys
-
-        if not sys.stdin.isatty():
-            return input
-
-        try:
-            # prevent selector event loop on Windows
-            self._patch_windows_asyncio()
-
-            from prompt_toolkit import PromptSession
-            from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
-            from prompt_toolkit.completion import WordCompleter
-            from prompt_toolkit.history import FileHistory
-            from prompt_toolkit.shortcuts import CompleteStyle
-
-            completer = WordCompleter(
-                sorted(registry),
-                ignore_case=True,
-                # Allow matching command fragments:
-                # "birth" -> "birthdays"
-                match_middle=True,
-                sentence=True,
-            )
-
-            # Keep history file size under control.
-            self.cleanup_history()
-
-            session = PromptSession(
-                history=FileHistory(self.history_file),
-                # Suggest previously used commands from history.
-                auto_suggest=AutoSuggestFromHistory(),
-                completer=completer,
-                # Completion is triggered only by TAB,
-                # similar to classic shell behavior.
-                complete_while_typing=False,
-                # Disable dropdown-like completion menu.
-                complete_style=CompleteStyle.READLINE_LIKE,
-            )
-
-            result = session.prompt
-
-        except (
-            # prompt_toolkit is not installed
-            ImportError,
-            OSError,
-            # prompt_toolkit may be installed but unavailable
-            # in IDE consoles, especially on Windows when there
-            # is no real console screen buffer.
-            Exception,
-        ) as error:
-            if not self.fallback_to_input:
-                raise
-
-            if self.show_fallback_reason:
-                print(f"Prompt toolkit disabled: {error}")
-
-            result = input
+    def create_base(
+        self,
+        completion_words: Sequence[str],
+        history_file: str | Path = ".commands_history",
+        max_history_entries: int = 100,
+    ) -> InputFunc:
+        """Create command input with history, completion, and auto-suggestions."""
+        result = self._try_prompt(
+            prompt=BaseInput(
+                history_file=history_file,
+                max_history_entries=max_history_entries,
+            ),
+            fallback=input,
+            completion_words=completion_words,
+        )
 
         return result
 
-    def create_note_input(self) -> Callable[[str, str], str]:
-        """Create note input function."""
-        import sys
+    def create_editable(self) -> EditableInputFunc:
+        """Create single-line editable input without history or suggestions."""
+        result = self._try_prompt(
+            prompt=EditableInput(),
+            fallback=self._create_editable_fallback(),
+        )
 
-        # prompt_toolkit needs an interactive terminal.
-        if not sys.stdin.isatty():
-            # fallback function to use simple input(), second argument for return type compatibility
-            def fallback_note_input(prompt: str, default: str) -> str:
-                return input(prompt)
+        return result
 
-            return fallback_note_input
+    def create_text(self) -> TextInputFunc:
+        """Create multiline text input without history or suggestions."""
+        result = self._try_prompt(
+            prompt=TextInput(),
+            fallback=self._create_text_fallback(),
+        )
+
+        return result
+
+    def _detect_prompt_toolkit(self) -> bool:
+        """Return whether prompt_toolkit can be used."""
+        result = False
 
         try:
-            # prevent selector event loop on Windows
-            self._patch_windows_asyncio()
+            import sys
 
-            from prompt_toolkit import PromptSession
+            if not sys.stdin.isatty():
+                raise OSError("stdin is not interactive")
 
-            session = PromptSession()
+            patch_windows_asyncio()
 
-            def note_input(prompt: str, default: str) -> str:
-                return session.prompt(prompt, default=default)
+            import prompt_toolkit  # noqa: F401
 
-            return note_input
-
+            result = True
         except (ImportError, OSError, Exception) as error:
+            self._prompt_toolkit_error = error
+
+        return result
+
+    def _try_prompt(
+        self,
+        *,
+        prompt,
+        fallback: PromptFunc,
+        **params: object,
+    ) -> PromptFunc:
+        """Create prompt function or fallback."""
+        result: PromptFunc | None = None
+        error = self._prompt_toolkit_error
+
+        if self._prompt_toolkit_available:
+            try:
+                result = prompt.create(**params)
+            except (OSError, Exception) as prompt_error:
+                error = prompt_error
+
+        if result is None:
             if not self.fallback_to_input:
-                raise
+                raise RuntimeError("Prompt toolkit is not available.") from error
 
-            if self.show_fallback_reason:
-                print(f"Prompt toolkit note input disabled: {error}")
+            if self.show_fallback_reason and error is not None:
+                print(f"Prompt toolkit disabled: {error}")
 
-            # fall back to simple input without prompt_toolkit
-            def fallback_note_input(prompt: str, default: str) -> str:
-                return input(prompt)
+            result = fallback
 
-            return fallback_note_input
+        return result
 
     @staticmethod
-    def _patch_windows_asyncio() -> None:
-        """Use selector event loop on Windows for prompt_toolkit stability."""
-        import asyncio
-        import sys
+    def _create_editable_fallback() -> EditableInputFunc:
+        """Create simple editable input fallback."""
 
-        if sys.platform.startswith("win"):
-            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+        def editable_input(prompt: str, default: str) -> str | None:
+            current = f" [{default}]" if default else ""
+            result = input(f"{prompt}{current}\n> ")
+
+            return result
+
+        return editable_input
+
+    @staticmethod
+    def _create_text_fallback() -> TextInputFunc:
+        """Create simple text input fallback."""
+
+        def text_input(prompt: str, default: str) -> str:
+            current = f" [{default}]" if default else ""
+            result = input(f"{prompt}{current}\n> ") or default
+
+            return result
+
+        return text_input

@@ -1,29 +1,41 @@
 """Optional Rich-based CLI presenter."""
 
-from typing import Final
+import os
 
-from rich.console import Group
-
+from assistant_t800.application.commands import Command
+from assistant_t800.application.results import AppResult, ResultStatus
+from assistant_t800.domain.contacts import Contact
+from assistant_t800.interfaces.cli.prompting import EditableInputFunc, TextInputFunc
 from assistant_t800.interfaces.cli.presenter import CliPresenter
-from assistant_t800.localization import APP_VERSION, Message
+from assistant_t800.interfaces.cli.rich.birthdays import (
+    display_birthdays_table,
+    is_birthdays_list,
+)
+from assistant_t800.interfaces.cli.rich.contact_card import (
+    display_contact_card,
+    is_contact,
+)
+from assistant_t800.interfaces.cli.rich.contacts import (
+    display_contacts_table,
+    is_contact_list,
+)
+from assistant_t800.interfaces.cli.rich.header import (
+    display_results_header,
+    display_results_title,
+    display_welcome_header,
+)
+from assistant_t800.interfaces.cli.rich.help import display_help
+from assistant_t800.interfaces.cli.rich.inline_edit import (
+    request_note_edit,
+    request_tag_edit,
+)
+from assistant_t800.interfaces.cli.rich.status import display_status
+from assistant_t800.interfaces.cli.rich.welcome import display_welcome
+from assistant_t800.localization import Message, render_message
 
 
 class RichCliPresenter:
-    """Rich presenter with plain presenter fallback."""
-
-    HEADER_WIDTH: Final[int] = 80
-    FACE_WIDTH: Final[int] = 20
-    TITLE_WIDTH: Final[int] = 50
-
-    TERMINATOR_FACE: Final[str] = r"""       ______   
-     <((((((\\\ 
-     /      . }\
-     ;--..--._|}
-     '--/\--'  )
-     | '-'  :'| 
-     . -==- .-| 
-      \.__.'    
-                """
+    """Rich presenter facade with plain presenter fallback."""
 
     def __init__(self, fallback: CliPresenter) -> None:
         from rich.console import Console
@@ -37,77 +49,149 @@ class RichCliPresenter:
         self._text_cls = Text
         self._fallback = fallback
 
-    def display_header(self) -> None:
-        """Display Rich header."""
-        self.clear()
+    @property
+    def console(self):
+        return self._console
 
-        header = self._table_cls.grid(padding=(0, 0))
-        header.add_column(no_wrap=True, width=self.FACE_WIDTH)
-        header.add_column(width=self.TITLE_WIDTH)
+    @property
+    def panel_cls(self):
+        return self._panel_cls
 
-        title = Group(
-            self._text_cls(),
-            self._text_cls(
-                str(Message.WELCOME_TITLE),
-                justify="center",
-                style="bold green",
-            ),
-            self._text_cls(""),
-            self._text_cls(
-                str(Message.WELCOME_SUBTITLE),
-                justify="center",
-                style="white",
-            ),
-            self._text_cls("\n\n"),
-            self._text_cls(
-                f"v. {APP_VERSION}",
-                justify="right",
-                style="dim",
-            ),
+    @property
+    def table_cls(self):
+        return self._table_cls
+
+    @property
+    def text_cls(self):
+        return self._text_cls
+
+    def request_note_edit(
+        self,
+        *,
+        contact: Contact,
+        current_note: str,
+        text_input_func: TextInputFunc,
+    ) -> str | None:
+        """Request note text for contact editing."""
+        result = request_note_edit(
+            self,
+            contact=contact,
+            current_note=current_note,
+            text_input_func=text_input_func,
         )
 
-        header.add_row(
-            self._text_cls(self.TERMINATOR_FACE, style="bold green"),
-            title,
+        return result
+
+    def request_tag_edit(
+        self,
+        *,
+        contact: Contact,
+        current_tags: str,
+        editable_func: EditableInputFunc,
+    ) -> str | None:
+        """Request tag text for contact editing."""
+        result = request_tag_edit(
+            self,
+            contact=contact,
+            current_tags=current_tags,
+            editable_func=editable_func,
         )
 
-        self._console.print(
-            self._panel_cls(
-                header,
-                border_style="green",
-                width=self.HEADER_WIDTH,
-            )
-        )
+        return result
 
-        self._console.print(self._text_cls(""))
+    def display_welcome_header(self) -> None:
+        """Display Rich welcome header."""
+        display_welcome_header(self)
 
     def display_welcome(self) -> None:
         """Display Rich welcome screen."""
-        self.display_header()
+        display_welcome(self)
+        self.display_prompt_spacing()
 
-        hints = self._text_cls("")
-        hints.append(f"{Message.WELCOME_HINTS_TITLE}:\n", style="bold cyan")
-        hints.append("  • ", style="cyan")
-        hints.append(f"{Message.WELCOME_QUOTES_HINT}\n", style="white")
-        hints.append('    add "John Smith" 0991112233 "New York"\n', style="dim")
-        hints.append("  • ", style="cyan")
-        hints.append(f"{Message.WELCOME_MULTI_VALUE_HINT}\n", style="white")
-        hints.append("    add-phone John 0991112233;0992223344\n", style="dim")
-        hints.append("  • ", style="cyan")
-        hints.append(f"{Message.WELCOME_REMOVE_HINT}\n", style="white")
-        hints.append("  • ", style="cyan")
-        hints.append(f"{Message.WELCOME_HELP_HINT}\n", style="white")
+    def display_results_header(self) -> None:
+        """Display compact Rich results header."""
+        display_results_header(self)
 
-        self._console.print(hints)
+    def display_results_title(self, text: str | Message) -> None:
+        """Display command execution results title."""
+        display_results_title(self, text)
+
+    def display_help(self, registry: dict[str, Command]) -> None:
+        """Display Rich command help."""
+        display_help(self, registry)
+
+    def display_contacts(self, contacts: list[Contact]) -> None:
+        """Display Rich contact list."""
+        display_contacts_table(
+            self,
+            contacts,
+            title=Message.CONTACTS_LISTED.render(count=len(contacts)),
+        )
 
     def display_goodbye(self) -> None:
         """Display goodbye message."""
         self._fallback.display_goodbye()
 
-    def display(self, result) -> None:
+    def display(self, result: AppResult) -> None:
         """Display one application result."""
-        self._fallback.display(result)
+        is_list = is_contact_list(result.data)
+        is_birthdays = is_birthdays_list(result.data)
+
+        if self._should_display_status(result, is_list, is_birthdays):
+            display_status(self, result)
+
+        if self._is_command_registry(result.data):
+            self.display_help(result.data)
+        elif is_contact(result.data):
+            display_contact_card(self, result.data)
+        elif is_list:
+            self.display_contacts(result.data)
+        elif is_birthdays:
+            display_birthdays_table(
+                self,
+                result.data,
+                title=render_message(result.message),
+            )
+        elif result.data is not None:
+            self._fallback.display(result)
+
+        self.display_prompt_spacing()
+
+    @staticmethod
+    def _should_display_status(
+        result: AppResult,
+        is_list: bool,
+        is_birthdays: bool,
+    ) -> bool:
+        """Return whether a separate status panel should be displayed."""
+        message_code = result.message.code if result.message is not None else None
+        is_success_payload = (
+            result.status == ResultStatus.SUCCESS and result.data is not None
+        )
+        is_found_contact = (
+            is_contact(result.data) and message_code is Message.CONTACT_FOUND
+        )
+        should_display = not (
+            (is_list and result.status == ResultStatus.SUCCESS)
+            or (is_birthdays and result.status == ResultStatus.SUCCESS)
+            or (is_success_payload and is_found_contact)
+        )
+
+        return should_display
+
+    def display_prompt_spacing(self) -> None:
+        """Display spacing before the next prompt."""
+        self._console.print()
 
     def clear(self) -> None:
         """Clear terminal screen."""
-        self._console.clear()
+        os.system("cls||clear")
+
+    @staticmethod
+    def _is_command_registry(data: object) -> bool:
+        """Return whether payload is a command registry."""
+        result = isinstance(data, dict) and all(
+            isinstance(item, Command) for item in data.values()
+        )
+
+        return result

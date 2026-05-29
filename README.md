@@ -35,30 +35,92 @@ FIXME
 
 Assistant T800 is a Python 3.13+ personal assistant for managing contacts from the terminal.
 
-The main interface is a classic CLI. The project also includes an optional Textual-based TUI with AI chat support.
+The primary interface is a CLI with command history, completion, aliases, localized messages, Rich output, and optional AI-based command suggestions. The project also contains an optional Textual-based TUI / AI-chat layer, but the current main product is the CLI.
 
 ---
 
 ## Current Features
 
-### Contact management
+### Contact Management
 
 - Add contacts with:
-  - name
-  - phone numbers
-  - email addresses
-  - address
-  - birthday
+  - name;
+  - one or more phone numbers;
+  - one or more e-mail addresses;
+  - address;
+  - birthday.
 - Show all contacts.
-- Show one contact by name.
+- Show one contact as a detailed card.
 - Search contacts by all fields or by a specific field.
 - Show upcoming birthdays with weekend congratulations moved to Monday.
 - Update address and birthday.
-- Add one or more phone numbers or email addresses.
-- Edit and remove contact notes.
-- Add and remove contact tags.
+- Add one or more phone numbers or e-mail addresses.
 - Remove contacts and contact fields with confirmation.
-- Remove one, many, or all phone numbers / email addresses.
+- Remove one, many, or all phone numbers / e-mail addresses.
+
+### Notes
+
+- Edit contact notes with:
+
+```bash
+edit-note <name>
+```
+
+- The inline note editor is shown under the contact card.
+- Existing note text is prefilled.
+- Key bindings:
+  - `Enter` — new line;
+  - `Ctrl+S` — save;
+  - `Esc` / `Ctrl+C` — cancel.
+- Direct note update is also supported:
+
+```bash
+edit-note <name> "note text"
+```
+
+- Notes can be removed with:
+
+```bash
+remove-note <name>
+```
+
+### Tags
+
+Tags are managed through one user-friendly command:
+
+```bash
+edit-tags <name>
+```
+
+The command opens an inline editable field under the contact card.
+
+- Existing tags are prefilled.
+- Tags can be separated by `;` or `,`.
+- Empty saved tag text means "remove all tags" and requires confirmation.
+- `Esc` cancels editing and does not change tags.
+
+### AI Tag Suggestions
+
+Let the AI pick tags for a contact:
+
+```bash
+suggest-tags <name>
+```
+
+How it works:
+
+- The AI looks at the contact's name, country, city, note, birthday month and current tags, then suggests up to 5 short tags.
+- It writes tags in the same language as the contact's data (Ukrainian or English).
+- The suggested tags are joined with the existing ones and shown in the same editable line as `edit-tags`.
+- You can edit, add or remove tags, then `Enter` to save or `Esc` to cancel. Nothing is saved until you confirm.
+
+Why it's useful:
+
+- You don't have to think up tags yourself — the AI reads contact info and does it.
+- You stay in control: you always see and edit the tags before they are saved.
+- Manual tagging still works the same; this is just a faster way to add tags.
+
+Needs a `GOOGLE_API_KEY` (see below). The command only works interactively; if `prompt_toolkit` is missing, use `edit-tags` instead.
 
 ### Search
 
@@ -72,6 +134,38 @@ Implemented commands:
 - `search-tag <query>`
 
 Search is case-insensitive and supports partial matches.
+
+No-match results are not treated as successful OK results. They return the corresponding warning/info status, for example `NAME_NOT_FOUND`, `QUERY_NOT_FOUND`, `PHONE_NOT_FOUND`, and similar.
+
+### CLI UX
+
+- Command history.
+- Command completion.
+- Canonical command completion words, not raw aliases.
+- Fallback to standard `input()` if `prompt_toolkit` is unavailable.
+- Aliases in English and Ukrainian.
+- Long alias resolution, for example:
+
+```text
+знайди телефон Аліса
+```
+
+can resolve to:
+
+```text
+search-phone Аліса
+```
+
+### Rich Output
+
+The CLI uses Rich for cleaner output when available:
+
+- welcome screen;
+- contact cards;
+- status panels;
+- contacts table;
+- birthdays table;
+- inline hint bars for note/tag editing.
 
 ### Persistence
 
@@ -87,15 +181,15 @@ CLI command history is stored in:
 .data/cli_commands_history
 ```
 
-### CLI UX
+Storage uses safe pickle persistence:
 
-- Command history.
-- Command completion.
-- Fallback to standard `input()` if `prompt_toolkit` is unavailable.
-- Aliases in English and Ukrainian.
-- Long alias resolution, for example `знайди телефон Аліса` can resolve to `search-phone Аліса`.
+- atomic save through a temporary file;
+- `fsync()` before replacing the real database file;
+- `.bak` backup file;
+- recovery from empty or corrupted main storage;
+- startup prompt to restore from backup if the main storage file is empty and the backup is valid.
 
-### AI suggestions
+### AI Suggestions
 
 If a command is unknown, the assistant can suggest a corrected command using:
 
@@ -122,8 +216,10 @@ The Textual TUI is available as an additional AI-powered interface. It shares th
 
 ## Planned Features
 
-These features are optional follow-up improvements:
+These features are already prepared by the architecture but are not fully exposed through CLI commands yet:
 
+- `add-tag <name> <tag>` — add one or more tags.
+- `remove-tag <name> <tag>` — remove one or more tags.
 - Optional sorting or grouping by tags.
 
 ---
@@ -239,21 +335,21 @@ Use this option if you do not want to use `uv`.
 Windows CMD:
 
 ```cmd
-py -3.13 -m venv .venv
+py -m venv .venv
 .venv\Scripts\activate.bat
 ```
 
 Windows PowerShell:
 
 ```powershell
-py -3.13 -m venv .venv
+py -m venv .venv
 .venv\Scripts\Activate.ps1
 ```
 
 Linux / macOS:
 
 ```bash
-python3.13 -m venv .venv
+python -m venv .venv
 source .venv/bin/activate
 ```
 
@@ -324,12 +420,14 @@ add "John Smith" 0991112233 john@example.com "New York" 25.05.1990
 contacts
 get "John Smith"
 search-phone 099
+search-note demo
+search-tag work
 birthdays
 birthdays 14
 add-phone "John Smith" 0992223344;0993334455
-edit-note "John Smith" "Call after demo"
-add-tag "John Smith" work;urgent
-remove-tag "John Smith" urgent
+add-email "John Smith" john@example.com;work@example.com
+edit-note "John Smith"
+edit-tags "John Smith"
 remove-note "John Smith"
 remove-email "John Smith"
 remove "John Smith"
@@ -383,7 +481,7 @@ pytest
 
 ### Running unit tests
 
-Run the full test suite:
+Run tests:
 
 ```bash
 uv run pytest
@@ -395,31 +493,10 @@ Run with verbose output:
 uv run pytest -v
 ```
 
-Run only the AI tools tests:
+Current checkpoint test result:
 
-```bash
-uv run pytest tests/test_ai_tools.py
-```
-
-Run a specific test by name:
-
-```bash
-uv run pytest -k "test_add_contact"
-```
-
-Run with coverage report:
-
-```bash
-uv run pytest --cov=src/assistant_t800 --cov-report=term-missing
-```
-
-With pip (activate the virtual environment first):
-
-```bash
-pytest
-pytest -v
-pytest tests/test_ai_tools.py
-pytest --cov=src/assistant_t800 --cov-report=term-missing
+```text
+609 passed, 1 skipped
 ```
 
 ---
@@ -428,6 +505,7 @@ pytest --cov=src/assistant_t800 --cov-report=term-missing
 
 - Python 3.13+
 - CLI with `prompt_toolkit`
+- Rich terminal rendering
 - Textual TUI
 - `pydantic-ai`
 - Google Gemini via `google-genai`
@@ -444,12 +522,20 @@ The current baseline includes:
 
 - working CLI;
 - command aliases;
-- command history and completion;
+- command history and clean completion;
 - contact management;
+- note management;
+- inline tag management;
 - search;
 - birthdays;
-- pickle persistence;
-- AI suggestions;
-- optional TUI.
+- Rich UI rendering;
+- structured application statuses;
+- safe pickle persistence with backup and recovery;
+- AI command suggestions;
+- optional TUI;
+- updated test suite.
 
-The next planned area is optional tag sorting or grouping.
+The next planned area is AI-assisted data enrichment: 
+- AI phone validation fallback, 
+- AI address parsing/validation, 
+- AI tag suggestions.

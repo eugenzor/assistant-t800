@@ -127,6 +127,17 @@ class Contact:
 
         self.tags.remove(normalized)
 
+    def set_tags(self, tags: tuple[str, ...]) -> None:
+        """Replace contact tags with normalized tags."""
+        self.tags.clear()
+
+        for tag in tags:
+            self.add_tag(tag)
+
+    def clear_tags(self) -> None:
+        """Remove all contact tags."""
+        self.tags.clear()
+
     def __str__(self) -> str:
         """Return a compact user-facing contact representation."""
         parts = [f"Ім'я контакту: {self.name.value}"]

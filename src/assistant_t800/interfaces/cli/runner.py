@@ -1,17 +1,23 @@
 """Classic CLI input loop."""
 
-import shlex
 from collections.abc import Callable
 
 from assistant_t800.application.dispatcher import CommandDispatcher
 from assistant_t800.application.results import AppResult
+from assistant_t800.interfaces.cli.edit_resolvers import (
+    NoteEditResolver,
+    TagEditResolver,
+    SuggestTagsResolver,
+)
+from assistant_t800.interfaces.cli.prompting import (
+    InputFunc,
+    EditableInputFunc,
+    TextInputFunc,
+)
 from assistant_t800.interfaces.cli.presenter import CliPresenter
 from assistant_t800.localization import ErrorCode, Message
 from assistant_t800.suggestions import SuggestionService
-from assistant_t800.application.enums import SystemValue
 
-InputFunc = Callable[[str], str]
-NoteInputFunc = Callable[[str, str], str]
 OutputFunc = Callable[[str], None]
 
 
@@ -23,7 +29,8 @@ class CliRunner:
         dispatcher: CommandDispatcher,
         presenter: CliPresenter,
         input_func: InputFunc = input,
-        note_input_func: NoteInputFunc | None = None,
+        editable_func: EditableInputFunc | None = None,
+        text_input_func: TextInputFunc | None = None,
         output_func: OutputFunc = print,
         suggestion_service: SuggestionService | None = None,
         force_suggestion_confirm: bool = True,
@@ -32,7 +39,23 @@ class CliRunner:
         self._dispatcher = dispatcher
         self._presenter = presenter
         self._input_func = input_func
-        self._note_input_func = note_input_func
+        self._editable_func = editable_func
+        self._text_input_func = text_input_func
+        self._note_edit_resolver = NoteEditResolver(
+            context=dispatcher.context,
+            presenter=presenter,
+            text_input_func=text_input_func,
+        )
+        self._tag_edit_resolver = TagEditResolver(
+            context=dispatcher.context,
+            presenter=presenter,
+            editable_func=editable_func,
+        )
+        self._suggest_tags_resolver = SuggestTagsResolver(
+            context=dispatcher.context,
+            presenter=presenter,
+            editable_func=editable_func,
+        )
         self._output_func = output_func
         self._suggestion_service = suggestion_service
         self._force_suggestion_confirm = force_suggestion_confirm
@@ -60,6 +83,13 @@ class CliRunner:
         try:
             while True:
                 result = self._dispatch_input()
+
+                if result is None:
+                    continue
+
+                if self._should_display_results_header(result):
+                    self.presenter.display_results_header()
+
                 self.presenter.display(result)
 
                 if result.should_exit:
@@ -67,28 +97,53 @@ class CliRunner:
         except (KeyboardInterrupt, EOFError):
             self.presenter.display_goodbye()
 
-    def _dispatch_input(self) -> AppResult:
+    def _dispatch_input(self) -> AppResult | None:
         """Read, resolve, dispatch, and optionally confirm one input line."""
         raw_input = self._input_func(f"{Message.PROMPT} ")
-        command_input = self._resolve_note_edit_input(raw_input)
 
-        result = self.dispatcher.dispatch(command_input)
+        if not raw_input.strip():
+            self.presenter.display_welcome()
+            result = None
+        else:
+            command_input = self._resolve_interactive_input(raw_input)
 
-        if self._can_suggest(result):
-            suggested_input = self._get_confirmed_suggestion(raw_input)
-
-            if suggested_input is not None:
-                command_input = suggested_input
+            if isinstance(command_input, AppResult):
+                result = command_input
+            else:
                 result = self.dispatcher.dispatch(command_input)
 
-        if result.requires_confirmation:
-            result = self._confirm_and_dispatch(command_input, result)
+                if self._can_suggest(result):
+                    suggested_input = self._get_confirmed_suggestion(raw_input)
+
+                    if suggested_input is not None:
+                        command_input = self._resolve_interactive_input(suggested_input)
+
+                        if isinstance(command_input, AppResult):
+                            result = command_input
+                        else:
+                            result = self.dispatcher.dispatch(command_input)
+
+                if result.requires_confirmation:
+                    result = self._confirm_and_dispatch(command_input, result)
 
         return result
 
+    def _resolve_interactive_input(self, raw_input: str) -> str | AppResult:
+        """Resolve interactive edit commands before dispatch."""
+        note_input = self._note_edit_resolver.resolve(raw_input)
+
+        if isinstance(note_input, AppResult):
+            return note_input
+
+        tag_input = self._tag_edit_resolver.resolve(note_input)
+
+        if isinstance(tag_input, AppResult):
+            return tag_input
+
+        return self._suggest_tags_resolver.resolve(tag_input)
+
     def _confirm_and_dispatch(self, command_input: str, result: AppResult) -> AppResult:
         """Ask for confirmation and execute the resolved command when accepted."""
-
         if self._force_removal_confirm:
             confirmation = result.confirmation.message
             answer = confirmation.code.confirm_check(
@@ -103,6 +158,13 @@ class CliRunner:
             final_result = AppResult.ok(Message.OPERATION_CANCELLED)
 
         return final_result
+
+    @staticmethod
+    def _should_display_results_header(result: AppResult) -> bool:
+        """Return whether results header should be displayed."""
+        should_display = not result.should_exit and not result.requires_confirmation
+
+        return should_display
 
     def _can_suggest(self, result: AppResult) -> bool:
         """Return whether command suggestions should be requested."""
@@ -139,41 +201,3 @@ class CliRunner:
             result = suggested_input
 
         return result
-
-    def _resolve_note_edit_input(self, raw_input: str) -> str:
-        """Resolve note edit input."""
-        if self._note_input_func is None:
-            return raw_input
-
-        try:
-            parts = shlex.split(raw_input)
-        except ValueError:
-            return raw_input
-
-        if len(parts) != 2:
-            return raw_input
-
-        if parts[0] != "edit-note":
-            return raw_input
-
-        name = parts[1]
-
-        # getting existing note content from contact
-        try:
-            contact = self.dispatcher.context.contacts.get_contact(name)
-        except KeyError:
-            return raw_input
-
-        existing_note = contact.note
-        if existing_note == SystemValue.EMPTY_TEXT.value:
-            existing_note = ""
-
-        edited_note = self._note_input_func(f"Note for {name}: ", existing_note)
-
-        # we need to rebuild the command input with edited note content correctly i.e. (edit-note Alice "Call after demo")
-        return f"edit-note {self._quote_arg(name)} {self._quote_arg(edited_note)}"
-
-    @staticmethod
-    def _quote_arg(value: str) -> str:
-        """Quote one argument for dispatcher parsing."""
-        return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'

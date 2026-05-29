@@ -8,7 +8,8 @@ from assistant_t800.application.enums import SystemValue
 from assistant_t800.application.results import AppMessage, AppResult
 from assistant_t800.domain.birthdays import BirthdaysListContact
 from assistant_t800.domain.contacts import Contact
-from assistant_t800.localization import Message, render_message
+from assistant_t800.interfaces.cli.prompting import EditableInputFunc, TextInputFunc
+from assistant_t800.localization import APP_VERSION, Message, render_message
 
 
 class CliPresenter:
@@ -17,11 +18,55 @@ class CliPresenter:
     def __init__(self, output_func=print) -> None:
         self._output_func = output_func
 
+    def request_note_edit(
+        self,
+        *,
+        contact: Contact,
+        current_note: str,
+        text_input_func: TextInputFunc,
+    ) -> str | None:
+        """Request note text under the contact details."""
+        self._output_func(self._render_contact(contact))
+        self._output_func(str(Message.EDIT_NOTE_INPUT_HINT))
+        result = text_input_func(
+            f"{Message.EDITABLE_PROMPT} ",
+            current_note,
+        )
+
+        return result
+
+    def request_tag_edit(
+        self,
+        *,
+        contact: Contact,
+        current_tags: str,
+        editable_func: EditableInputFunc,
+    ) -> str | None:
+        """Request comma-separated tags under the contact details."""
+        self._output_func(self._render_contact(contact))
+        self._output_func(str(Message.EDIT_TAGS_INPUT_HINT))
+        result = editable_func(
+            f"{Message.EDITABLE_PROMPT} ",
+            current_tags,
+        )
+
+        return result
+
     def display_welcome(self) -> None:
         """Display the welcome screen."""
         if output := self.render_welcome():
             self.clear()
             self._output_func(output)
+
+    def display_results_header(self) -> None:
+        """Display compact results header."""
+        self.clear()
+
+        self._output_func(
+            "ASSISTANT T800 "
+            "──────────────────────────────────────────── "
+            f"v. {APP_VERSION}"
+        )
 
     def display_goodbye(self) -> None:
         """Display the goodbye message."""
@@ -35,7 +80,6 @@ class CliPresenter:
     @classmethod
     def render_header(cls) -> str:
         """Render the header."""
-        cls.clear()
         result = dedent(
             f"""
                     ╭────────────────────────────────────────────────────────────╮
@@ -116,19 +160,11 @@ class CliPresenter:
         rows = [f"{Message.CONTACT_NAME}: {contact.name.value}"]
 
         if contact.phones:
-            label = (
-                str(Message.CONTACT_PHONES)
-                if len(contact.phones) > 1
-                else str(Message.CONTACT_PHONES)[:-1]
-            )
+            label = str(Message.CONTACT_PHONE)
             rows.append(f"{label}: " + "; ".join(item.value for item in contact.phones))
 
         if contact.emails:
-            label = (
-                str(Message.CONTACT_EMAILS)
-                if len(contact.emails) > 1
-                else str(Message.CONTACT_EMAILS)[:-1]
-            )
+            label = str(Message.CONTACT_EMAIL)
             rows.append(f"{label}: " + "; ".join(item.value for item in contact.emails))
 
         if contact.address is not None:
