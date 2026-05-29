@@ -24,6 +24,7 @@ def mask_phones(phones: Sequence[Phone]) -> list[str]:
     ]
     return masked
 
+
 def address_geo_fields(address: Address) -> dict[str, str] | None:
     """Return geo fields from a structured address. Today: always None.
 
@@ -33,11 +34,13 @@ def address_geo_fields(address: Address) -> dict[str, str] | None:
     """
     return None
 
+
 def birthday_month(birthday: Birthday) -> str | None:
     """Return a month of the birthday."""
     if not birthday:
         return None
     return birthday.date.strftime("%B").lower()
+
 
 def build_tag_suggestion_snapshot(contact: Contact) -> dict:
     """Build a snapshot of a contact for tag suggestion."""

@@ -220,9 +220,7 @@ class SuggestTagsResolver:
                 if edited is None:
                     result = AppResult.ok(data=contact)
                 else:
-                    result = self._build_input(
-                        self.EDIT_TAGS_COMMAND, name, edited
-                    )
+                    result = self._build_input(self.EDIT_TAGS_COMMAND, name, edited)
 
         return result
 

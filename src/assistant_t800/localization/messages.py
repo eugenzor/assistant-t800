@@ -150,6 +150,7 @@ class Message(MultiLangEnum):
     SUGGEST_TAGS_DESCRIPTION = auto()
     SUGGEST_TAGS_NONE = auto()
 
+
 class ErrorCode(MultiLangEnum):
     """Localized application error codes."""
 

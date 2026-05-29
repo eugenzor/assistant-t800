@@ -3,6 +3,7 @@
 Builds a ``pydantic_ai``-based agent. Tool functions are defined in
 :mod:`assistant_t800.ai.tools`.
 """
+
 import json
 import os
 from functools import lru_cache
@@ -216,7 +217,9 @@ class _TagSuggestion(BaseModel):
 def _get_tag_suggest_agent() -> Agent[None, _TagSuggestion]:
     """Create and return a configured singleton AI agent for tag suggestions."""
     model = os.environ.get("ASSISTANT_T800_MODEL", DEFAULT_MODEL)
-    return Agent(model, output_type=_TagSuggestion, system_prompt=_TAG_SUGGESTION_PROMPT)
+    return Agent(
+        model, output_type=_TagSuggestion, system_prompt=_TAG_SUGGESTION_PROMPT
+    )
 
 
 def suggest_tags(snapshot: dict) -> list[str]:
