@@ -89,7 +89,7 @@ domain → repositories → services → application → interfaces (CLI / TUI)
 | **localization** | Українські та англійські повідомлення + аліаси команд | `src/assistant_t800/localization/` |
 | **storage** | Pickle-персистенс із відновленням після збоїв | `src/assistant_t800/storage/` |
 | **suggestions** | Fuzzy-match + AI-fallback для виправлення опечаток | `src/assistant_t800/suggestions/` |
-| **ai** | Pydantic-AI агент «Арні» з інструментами для TUI | `src/assistant_t800/ai/` |
+| **ai** | Pydantic-AI агент «Арні», інструменти, JSON-серіалізація контактів для LLM | `src/assistant_t800/ai/` |
 | **info_validator** | Класифікація токенів (phone/email/birthday/address) з опційним AI-fallback | `src/assistant_t800/info_validator/` |
 
 ### Команди CLI
@@ -136,9 +136,10 @@ domain → repositories → services → application → interfaces (CLI / TUI)
 **AI-чат у TUI** (`src/assistant_t800/ai/agent.py`)
 - Модель: Gemini 3.1 Flash Lite
 - Персона: «Арні» — кібернетичний асистент у стилі T-800
-- Інструменти 1:1 до методів `ContactsService` (`src/assistant_t800/ai/tools.py`)
+- Інструменти 1:1 до методів `ContactsService` (`src/assistant_t800/ai/tools.py`) — CRUD контактів, пошук, дні народження, нотатки, плюс **мутація тегів** (`set_tags_from_text`, `clear_tags`)
 - Історія діалогу з лімітом (за замовчуванням 10 повідомлень)
 - Двопанельний UI: 70% контакти + 30% чат
+- LLM бачить структуровані дані: усі read-інструменти повертають JSON через `ai/utils.py::format_contacts_for_llm` з обираними полями (`ContactField` enum) і капом за `max_items` (default 25, конфігурується)
 
 ### Валідація полів (`src/assistant_t800/domain/fields.py`, `domain/phone_validation.py`, `domain/country.py`)
 
