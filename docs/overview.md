@@ -62,3 +62,63 @@ uv run mypy                                                # перевірка 
 
 - Адресна книга: `.data/address_book.pkl` (створюється автоматично)
 - Історія команд CLI: `.data/cli_commands_history`
+
+---
+
+## 2. Який функціонал є
+
+Проєкт — це **персональний CLI/TUI помічник для керування контактами** з опційним AI-агентом (Google Gemini). Це навчальний проєкт GoIT із чистою шаруватою архітектурою.
+
+### Архітектурні шари
+
+Деталі — у [architecture.md](architecture.md).
+
+```
+domain → repositories → services → application → interfaces (CLI / TUI)
+                                                ↑
+                              localization, storage, suggestions, ai
+```
+
+| Шар | Призначення | Де дивитися |
+|---|---|---|
+| **domain** | Моделі: `Contact`, `Phone`, `Email`, `Address`, `Birthday`, теги | `src/assistant_t800/domain/` |
+| **repositories** | `ContactsRepository` — in-memory CRUD + пошук | `src/assistant_t800/repositories/contacts.py` |
+| **services** | `ContactsService` — бізнес-операції поверх репозиторія | `src/assistant_t800/services/contacts.py` |
+| **application** | Диспетчер команд, хендлери, `AppResult` / `AppError` | `src/assistant_t800/application/` |
+| **interfaces** | CLI (основний) + TUI (Textual) + лаунчер | `src/assistant_t800/interfaces/` |
+| **localization** | Українські та англійські повідомлення + аліаси команд | `src/assistant_t800/localization/` |
+| **storage** | Pickle-персистенс із відновленням після збоїв | `src/assistant_t800/storage/` |
+| **suggestions** | Fuzzy-match + AI-fallback для виправлення опечаток | `src/assistant_t800/suggestions/` |
+| **ai** | Pydantic-AI агент «Арні» з інструментами для TUI | `src/assistant_t800/ai/` |
+
+### Команди CLI
+
+Повний довідник — у [commands-help.md](commands-help.md). Тут — згруповано за призначенням:
+
+**Створення та перегляд**
+- `add "Іван Петренко" 0991234567 ivan@example.com "Київ" 25.05.1990` — додати контакт
+- `contacts` — список усіх
+- `get "Іван Петренко"` — показати одного
+
+**Пошук (6 режимів)**
+- `search <текст>` — за всіма полями
+- `search-name` / `search-phone` / `search-email` / `search-note` / `search-tag`
+
+**Дні народження**
+- `birthdays [N]` — на N днів уперед; субота/неділя автоматично переносяться на понеділок
+- Реалізація: `src/assistant_t800/domain/birthdays.py`
+
+**Редагування**
+- `set-address`, `set-birthday`, `add-phone`, `add-email`, `edit-note`
+- `edit-tags <name> [tag1 tag2 ...]` — інтерактивне редагування тегів
+- `suggest-tags <name>` — AI пропонує теги, користувач підтверджує/править інлайн
+
+**Видалення (з підтвердженням)**
+- `remove`, `remove-address`, `remove-birthday`, `remove-phone`, `remove-email`, `remove-note`
+
+**Інше**
+- `help` / `?`, `exit` / `quit` / `q`
+
+**Аліаси:** кожна команда має англійський, український і **«кириличний QWERTY»** аліас. Приклад: `remove` ≡ `delete` ≡ `видали` ≡ `куьщму`.
+
+**Теги:** повноцінно підтримуються. Зберігаються нормалізованими (lowercase, без дублікатів), доступні через `search-tag`, керуються через `edit-tags` (ручне інлайн-редагування) і `suggest-tags` (AI). Окремих `add-tag` / `remove-tag` команд немає — все робиться через `edit-tags`.
