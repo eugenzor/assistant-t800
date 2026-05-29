@@ -16,6 +16,7 @@ class FakePresenter:
     """Capture presenter calls for inspection in tests."""
 
     refresh_calls: list[list[Contact]] = field(default_factory=list)
+    refresh_contact_calls: list[Contact] = field(default_factory=list)
     refresh_birthdays_calls: list[list[BirthdaysListContact]] = field(
         default_factory=list
     )
@@ -23,6 +24,9 @@ class FakePresenter:
 
     def refresh_contacts(self, contacts: list[Contact]) -> None:
         self.refresh_calls.append(list(contacts))
+
+    def refresh_contact(self, contact: Contact) -> None:
+        self.refresh_contact_calls.append(contact)
 
     def refresh_birthdays(self, birthdays: list[BirthdaysListContact]) -> None:
         self.refresh_birthdays_calls.append(list(birthdays))

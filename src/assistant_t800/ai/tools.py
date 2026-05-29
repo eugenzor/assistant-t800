@@ -11,8 +11,16 @@ from pydantic_ai import RunContext
 from pydantic_ai.messages import ToolReturn
 
 from assistant_t800.ai.deps import AgentDeps
+from assistant_t800.ai.utils import (
+    coalesce_read_fields,
+    format_birthdays_for_llm,
+    format_contacts_for_llm,
+    resolve_contact_fields,
+)
 from assistant_t800.ai.results import DisplayPayload
+from assistant_t800.domain.contacts import Contact, ContactField
 from assistant_t800.domain.fields import AddressInput
+from assistant_t800.services.contacts import ContactsService
 
 
 def _ok(message: str, display: DisplayPayload | None = None) -> ToolReturn[str]:
@@ -28,6 +36,49 @@ def _fail(message: str) -> ToolReturn[str]:
 def _contacts_display(contacts: list) -> DisplayPayload:
     """Build a contacts display payload."""
     return DisplayPayload(kind="contacts", contacts=contacts)
+
+
+def _contact_display(contact: Contact) -> DisplayPayload:
+    """Build a single-contact card display payload."""
+    return DisplayPayload(kind="contact", contact=contact)
+
+
+def _mutated_contact_display(service: ContactsService, name: str) -> DisplayPayload:
+    """Build card payload for the contact affected by a mutation."""
+    contact = service.get_contact(name)
+    return _contact_display(contact)
+
+
+def _contacts_llm_message(
+    header: str,
+    contacts: list[Contact],
+    *,
+    fields: frozenset[str] | None = None,
+) -> str:
+    """Build a tool return message with contact summaries for the LLM."""
+    body = format_contacts_for_llm(contacts, fields=fields)
+    if not body:
+        return header
+
+    return f"{header}\n{body}"
+
+
+def _contacts_read_result(
+    matches: list[Contact],
+    *,
+    header: str,
+    empty_message: str,
+    fields: list[ContactField] | None = None,
+) -> ToolReturn[str]:
+    """Build a read-tool return with LLM JSON and UI display metadata."""
+    if not matches:
+        return _ok(empty_message, _contacts_display([]))
+
+    resolved = resolve_contact_fields(coalesce_read_fields(fields))
+    return _ok(
+        _contacts_llm_message(header, matches, fields=resolved),
+        _contacts_display(matches),
+    )
 
 
 def add_contact(
@@ -78,132 +129,173 @@ def add_contact(
 
     return _ok(
         f"Контакт «{contact.name.value}» додано.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _contact_display(contact),
     )
 
 
-def get_contact(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
-    """Look up a single contact by name and show it in the UI panel."""
+def get_contact(
+    ctx: RunContext[AgentDeps],
+    name: str,
+    fields: list[ContactField] | None = None,
+) -> ToolReturn[str]:
+    """Look up a single contact by name and show it in the UI panel.
+
+    ``fields`` limits contact data returned to the LLM as JSON (not the UI panel).
+    Defaults to ``[ContactField.NAME]``; pass additional ``ContactField`` values when
+    more attributes are needed.
+    """
     try:
         contact = ctx.deps.contacts_service.get_contact(name)
     except KeyError as exc:
         return _fail(f"Контакт не знайдено: {exc}")
 
+    resolved = resolve_contact_fields(coalesce_read_fields(fields))
     return _ok(
-        f"Контакт «{contact.name.value}» відображено.",
-        _contacts_display([contact]),
+        _contacts_llm_message(
+            f"Контакт «{contact.name.value}»:",
+            [contact],
+            fields=resolved,
+        ),
+        _contact_display(contact),
     )
 
 
-def list_contacts(ctx: RunContext[AgentDeps]) -> ToolReturn[str]:
-    """Display all stored contacts in the UI panel."""
+def list_contacts(
+    ctx: RunContext[AgentDeps],
+    fields: list[ContactField] | None = None,
+) -> ToolReturn[str]:
+    """Display all stored contacts in the UI panel.
+
+    ``fields`` limits contact data returned to the LLM as JSON (not the UI panel).
+    Defaults to ``[ContactField.NAME]``; pass additional ``ContactField`` values when
+    more attributes are needed.
+    """
     contacts = ctx.deps.contacts_service.list_contacts()
-
-    if not contacts:
-        return _ok(
-            "Контактів поки немає. Панель відображення порожня.",
-            _contacts_display([]),
-        )
-
-    return _ok(
-        f"У панелі відображення показано контактів: {len(contacts)}.",
-        _contacts_display(contacts),
+    return _contacts_read_result(
+        contacts,
+        header=f"Контактів: {len(contacts)}.",
+        empty_message="Контактів поки немає. Панель відображення порожня.",
+        fields=fields,
     )
 
 
-def search_contacts(ctx: RunContext[AgentDeps], query: str) -> ToolReturn[str]:
-    """Search contacts across all searchable fields."""
+def search_contacts(
+    ctx: RunContext[AgentDeps],
+    query: str,
+    fields: list[ContactField] | None = None,
+) -> ToolReturn[str]:
+    """Search contacts across all searchable fields.
+
+    ``fields`` limits contact data returned to the LLM as JSON (not the UI panel).
+    Defaults to ``[ContactField.NAME]``; pass additional ``ContactField`` values when
+    more attributes are needed.
+    """
     matches = ctx.deps.contacts_service.search_contacts(query)
-
-    if not matches:
-        return _ok(
-            f"Жоден контакт не відповідає запиту «{query}».",
-            _contacts_display([]),
-        )
-
-    return _ok(
-        f"Знайдено контактів за запитом «{query}»: {len(matches)}.",
-        _contacts_display(matches),
+    return _contacts_read_result(
+        matches,
+        header=f"Знайдено контактів за запитом «{query}»: {len(matches)}.",
+        empty_message=f"Жоден контакт не відповідає запиту «{query}».",
+        fields=fields,
     )
 
 
-def search_contacts_by_name(ctx: RunContext[AgentDeps], query: str) -> ToolReturn[str]:
-    """Search contacts by name only."""
+def search_contacts_by_name(
+    ctx: RunContext[AgentDeps],
+    query: str,
+    fields: list[ContactField] | None = None,
+) -> ToolReturn[str]:
+    """Search contacts by name only.
+
+    ``fields`` limits contact data returned to the LLM as JSON (not the UI panel).
+    Defaults to ``[ContactField.NAME]``; pass additional ``ContactField`` values when
+    more attributes are needed.
+    """
     matches = ctx.deps.contacts_service.search_contacts_by_name(query)
-
-    if not matches:
-        return _ok(
-            f"Жоден контакт не відповідає імені «{query}».",
-            _contacts_display([]),
-        )
-
-    return _ok(
-        f"Знайдено контактів за іменем «{query}»: {len(matches)}.",
-        _contacts_display(matches),
+    return _contacts_read_result(
+        matches,
+        header=f"Знайдено контактів за іменем «{query}»: {len(matches)}.",
+        empty_message=f"Жоден контакт не відповідає імені «{query}».",
+        fields=fields,
     )
 
 
-def search_contacts_by_phone(ctx: RunContext[AgentDeps], query: str) -> ToolReturn[str]:
-    """Search contacts by phone number only."""
+def search_contacts_by_phone(
+    ctx: RunContext[AgentDeps],
+    query: str,
+    fields: list[ContactField] | None = None,
+) -> ToolReturn[str]:
+    """Search contacts by phone number only.
+
+    ``fields`` limits contact data returned to the LLM as JSON (not the UI panel).
+    Defaults to ``[ContactField.NAME]``; pass additional ``ContactField`` values when
+    more attributes are needed.
+    """
     matches = ctx.deps.contacts_service.search_contacts_by_phone(query)
-
-    if not matches:
-        return _ok(
-            f"Жоден контакт не відповідає телефону «{query}».",
-            _contacts_display([]),
-        )
-
-    return _ok(
-        f"Знайдено контактів за телефоном «{query}»: {len(matches)}.",
-        _contacts_display(matches),
+    return _contacts_read_result(
+        matches,
+        header=f"Знайдено контактів за телефоном «{query}»: {len(matches)}.",
+        empty_message=f"Жоден контакт не відповідає телефону «{query}».",
+        fields=fields,
     )
 
 
-def search_contacts_by_email(ctx: RunContext[AgentDeps], query: str) -> ToolReturn[str]:
-    """Search contacts by email only."""
+def search_contacts_by_email(
+    ctx: RunContext[AgentDeps],
+    query: str,
+    fields: list[ContactField] | None = None,
+) -> ToolReturn[str]:
+    """Search contacts by email only.
+
+    ``fields`` limits contact data returned to the LLM as JSON (not the UI panel).
+    Defaults to ``[ContactField.NAME]``; pass additional ``ContactField`` values when
+    more attributes are needed.
+    """
     matches = ctx.deps.contacts_service.search_contacts_by_email(query)
-
-    if not matches:
-        return _ok(
-            f"Жоден контакт не відповідає e-mail «{query}».",
-            _contacts_display([]),
-        )
-
-    return _ok(
-        f"Знайдено контактів за e-mail «{query}»: {len(matches)}.",
-        _contacts_display(matches),
+    return _contacts_read_result(
+        matches,
+        header=f"Знайдено контактів за e-mail «{query}»: {len(matches)}.",
+        empty_message=f"Жоден контакт не відповідає e-mail «{query}».",
+        fields=fields,
     )
 
 
-def search_contacts_by_note(ctx: RunContext[AgentDeps], query: str) -> ToolReturn[str]:
-    """Search contacts by note content only."""
+def search_contacts_by_note(
+    ctx: RunContext[AgentDeps],
+    query: str,
+    fields: list[ContactField] | None = None,
+) -> ToolReturn[str]:
+    """Search contacts by note content only.
+
+    ``fields`` limits contact data returned to the LLM as JSON (not the UI panel).
+    Defaults to ``[ContactField.NAME]``; pass additional ``ContactField`` values when
+    more attributes are needed.
+    """
     matches = ctx.deps.contacts_service.search_contacts_by_note(query)
-
-    if not matches:
-        return _ok(
-            f"Жоден контакт не відповідає нотатці «{query}».",
-            _contacts_display([]),
-        )
-
-    return _ok(
-        f"Знайдено контактів за нотаткою «{query}»: {len(matches)}.",
-        _contacts_display(matches),
+    return _contacts_read_result(
+        matches,
+        header=f"Знайдено контактів за нотаткою «{query}»: {len(matches)}.",
+        empty_message=f"Жоден контакт не відповідає нотатці «{query}».",
+        fields=fields,
     )
 
 
-def search_contacts_by_tag(ctx: RunContext[AgentDeps], query: str) -> ToolReturn[str]:
-    """Search contacts by tag only."""
+def search_contacts_by_tag(
+    ctx: RunContext[AgentDeps],
+    query: str,
+    fields: list[ContactField] | None = None,
+) -> ToolReturn[str]:
+    """Search contacts by tag only.
+
+    ``fields`` limits contact data returned to the LLM as JSON (not the UI panel).
+    Defaults to ``[ContactField.NAME]``; pass additional ``ContactField`` values when
+    more attributes are needed.
+    """
     matches = ctx.deps.contacts_service.search_contacts_by_tag(query)
-
-    if not matches:
-        return _ok(
-            f"Жоден контакт не відповідає тегу «{query}».",
-            _contacts_display([]),
-        )
-
-    return _ok(
-        f"Знайдено контактів за тегом «{query}»: {len(matches)}.",
-        _contacts_display(matches),
+    return _contacts_read_result(
+        matches,
+        header=f"Знайдено контактів за тегом «{query}»: {len(matches)}.",
+        empty_message=f"Жоден контакт не відповідає тегу «{query}».",
+        fields=fields,
     )
 
 
@@ -219,10 +311,10 @@ def search_upcoming_birthdays(
             DisplayPayload(kind="birthdays", birthdays=[]),
         )
 
-    return _ok(
-        f"Найближчих днів народження: {len(upcoming)}.",
-        DisplayPayload(kind="birthdays", birthdays=upcoming),
-    )
+    header = f"Найближчих днів народження: {len(upcoming)}."
+    body = format_birthdays_for_llm(upcoming)
+    message = header if not body else f"{header}\n{body}"
+    return _ok(message, DisplayPayload(kind="birthdays", birthdays=upcoming))
 
 
 def set_address(
@@ -255,7 +347,7 @@ def set_address(
 
     return _ok(
         f"Адресу контакту «{name}» оновлено.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -270,7 +362,7 @@ def set_birthday(
 
     return _ok(
         f"День народження контакту «{name}» оновлено.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -285,7 +377,7 @@ def add_phones(
 
     return _ok(
         f"Телефони додано до контакту «{name}»: {len(phones)}.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -300,7 +392,7 @@ def add_emails(
 
     return _ok(
         f"E-mail додано до контакту «{name}»: {len(emails)}.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -316,7 +408,7 @@ def set_note(ctx: RunContext[AgentDeps], name: str, note: str) -> ToolReturn[str
 
     return _ok(
         f"Нотатку контакту «{name}» оновлено.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -329,7 +421,40 @@ def remove_note(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
 
     return _ok(
         f"Нотатку контакту «{name}» видалено.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
+    )
+
+
+def set_tags_from_text(
+    ctx: RunContext[AgentDeps], name: str, tags: str
+) -> ToolReturn[str]:
+    """Replace all tags on an existing contact from comma/semicolon-separated text.
+
+    Tags are separated by ``;`` or ``,``. Empty or whitespace-only text clears
+    all tags. To add or remove individual tags, read current tags first, then
+    pass the full desired tag list.
+    """
+    try:
+        ctx.deps.contacts_service.set_tags_from_text(name, tags)
+    except (KeyError, ValueError) as exc:
+        return _fail(f"Не вдалося встановити теги: {exc}")
+
+    return _ok(
+        f"Теги контакту «{name}» оновлено.",
+        _mutated_contact_display(ctx.deps.contacts_service, name),
+    )
+
+
+def clear_tags(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
+    """Remove all tags from an existing contact."""
+    try:
+        ctx.deps.contacts_service.clear_tags(name)
+    except (KeyError, ValueError) as exc:
+        return _fail(f"Не вдалося очистити теги: {exc}")
+
+    return _ok(
+        f"Усі теги контакту «{name}» видалено.",
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -355,7 +480,7 @@ def remove_address(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
 
     return _ok(
         f"Адресу контакту «{name}» видалено.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -368,7 +493,7 @@ def remove_birthday(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
 
     return _ok(
         f"День народження контакту «{name}» видалено.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -383,7 +508,7 @@ def remove_phones(
 
     return _ok(
         f"Телефони видалено у контакту «{name}»: {len(phones)}.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -396,7 +521,7 @@ def remove_all_phones(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
 
     return _ok(
         f"Усі телефони контакту «{name}» видалено.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -411,7 +536,7 @@ def remove_emails(
 
     return _ok(
         f"E-mail видалено у контакту «{name}»: {len(emails)}.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )
 
 
@@ -424,5 +549,5 @@ def remove_all_emails(ctx: RunContext[AgentDeps], name: str) -> ToolReturn[str]:
 
     return _ok(
         f"Усі e-mail контакту «{name}» видалено.",
-        _contacts_display(ctx.deps.contacts_service.list_contacts()),
+        _mutated_contact_display(ctx.deps.contacts_service, name),
     )

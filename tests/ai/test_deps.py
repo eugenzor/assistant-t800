@@ -17,6 +17,9 @@ class _PresenterStub:
     def refresh_contacts(self, contacts):
         pass
 
+    def refresh_contact(self, contact):
+        pass
+
     def refresh_birthdays(self, birthdays):
         pass
 
@@ -104,11 +107,12 @@ def test_agent_deps_accepts_existing_message_history():
 
 
 def test_presenter_stub_is_protocol_compatible():
-    """A class implementing the three required methods satisfies the Presenter protocol."""
+    """A class implementing the required methods satisfies the Presenter protocol."""
     stub = _PresenterStub()
 
     # Protocol membership is structural — runtime checks just look at attributes.
     assert hasattr(stub, "refresh_contacts")
+    assert hasattr(stub, "refresh_contact")
     assert hasattr(stub, "refresh_birthdays")
     assert hasattr(stub, "print")
 
@@ -122,6 +126,15 @@ def test_agent_deps_presenter_supports_refresh_contacts():
 
     # Should not raise.
     deps.presenter.refresh_contacts([Contact(Name("Іван"))])
+
+
+def test_agent_deps_presenter_supports_refresh_contact():
+    deps = AgentDeps(
+        contacts_service=_service(),
+        presenter=_PresenterStub(),
+    )
+
+    deps.presenter.refresh_contact(Contact(Name("Іван")))
 
 
 def test_agent_deps_presenter_supports_refresh_birthdays():

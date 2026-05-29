@@ -11,7 +11,8 @@ from assistant_t800.domain.contacts import Contact
 class DisplayPayload:
     """Payload for updating the UI display panel after a tool run."""
 
-    kind: Literal["contacts", "birthdays", "text"]
+    kind: Literal["contact", "contacts", "birthdays", "text"]
+    contact: Contact | None = None
     contacts: list[Contact] | None = None
     birthdays: list[BirthdaysListContact] | None = None
     text: str | None = None

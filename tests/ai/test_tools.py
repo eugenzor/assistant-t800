@@ -9,7 +9,9 @@ import pytest
 
 from assistant_t800.ai import tools
 from assistant_t800.ai.results import DisplayPayload
+from assistant_t800.config import settings
 from assistant_t800.domain.birthdays import BirthdaysListContact
+from assistant_t800.domain.contacts import ContactField
 
 
 def _contacts(result) -> list:
@@ -18,6 +20,14 @@ def _contacts(result) -> list:
     assert result.metadata.kind == "contacts"
     assert result.metadata.contacts is not None
     return result.metadata.contacts
+
+
+def _contact(result):
+    """Return a single contact from a card display payload."""
+    assert isinstance(result.metadata, DisplayPayload)
+    assert result.metadata.kind == "contact"
+    assert result.metadata.contact is not None
+    return result.metadata.contact
 
 
 def _birthdays(result) -> list:
@@ -43,7 +53,7 @@ def test_add_contact_creates_contact_and_returns_display(ctx, service, presenter
     assert [p.value for p in contact.phones] == ["+380501234567"]
     assert [e.value for e in contact.emails] == ["ivan@example.com"]
     assert presenter.refresh_calls == []
-    assert [c.name.value for c in _contacts(result)] == ["Іван"]
+    assert _contact(result).name.value == "Іван"
 
 
 def test_add_contact_invalid_phone_leaves_state_untouched(ctx, service, presenter):
@@ -79,7 +89,7 @@ def test_get_contact_returns_single_contact_display(ctx, service, presenter):
     result = tools.get_contact(ctx, "Іван")
 
     assert presenter.refresh_calls == []
-    assert [c.name.value for c in _contacts(result)] == ["Іван"]
+    assert _contact(result).name.value == "Іван"
 
 
 def test_get_contact_missing_has_no_display(ctx, presenter):
@@ -235,7 +245,7 @@ def test_set_address_updates_value(ctx, service, presenter):
 
     assert service.get_contact("Іван").address.value == "UA, Київ, Хрещатик 1"
     assert presenter.refresh_calls == []
-    assert len(_contacts(result)) == 1
+    assert _contact(result).name.value == "Іван"
 
 
 def test_set_address_missing_contact_leaves_state_untouched(ctx, service, presenter):
@@ -299,7 +309,7 @@ def test_set_note_updates_value(ctx, service, presenter):
 
     assert service.get_contact("Іван").note == "важливий клієнт"
     assert presenter.refresh_calls == []
-    assert [c.name.value for c in _contacts(result)] == ["Іван"]
+    assert _contact(result).name.value == "Іван"
 
 
 def test_set_note_replaces_existing_note(ctx, service):
@@ -348,7 +358,7 @@ def test_remove_note_clears_value(ctx, service, presenter):
 
     assert service.get_contact("Іван").note == SystemValue.EMPTY_TEXT.value
     assert presenter.refresh_calls == []
-    assert [c.name.value for c in _contacts(result)] == ["Іван"]
+    assert _contact(result).name.value == "Іван"
 
 
 def test_remove_note_missing_contact_leaves_state_untouched(ctx, service, presenter):
@@ -370,7 +380,7 @@ def test_add_phones_appends_multiple(ctx, service, presenter):
     phones = [item.value for item in service.get_contact("Іван").phones]
     assert phones == ["+380501112233", "+380509998877"]
     assert presenter.refresh_calls == []
-    assert len(_contacts(result)) == 1
+    assert _contact(result).name.value == "Іван"
 
 
 def test_add_phones_invalid_value_leaves_state_untouched(ctx, service, presenter):
@@ -494,7 +504,7 @@ def test_remove_phones_removes_listed_values(ctx, service, presenter):
     remaining = [item.value for item in service.get_contact("Іван").phones]
     assert remaining == ["+380509998877"]
     assert presenter.refresh_calls == []
-    assert len(_contacts(result)) == 1
+    assert _contact(result).name.value == "Іван"
 
 
 def test_remove_phones_unknown_phone_leaves_state_untouched(ctx, service, presenter):
@@ -584,3 +594,193 @@ def test_remove_all_emails_missing_contact_leaves_state_untouched(
     assert service.list_contacts() == []
     assert presenter.refresh_calls == []
     assert result.metadata is None
+
+
+# ---------- set_tags_from_text ----------
+
+
+def test_set_tags_from_text_replaces_tags(ctx, service, presenter):
+    tools.add_contact(ctx, "Іван")
+
+    result = tools.set_tags_from_text(ctx, "Іван", "робота, vip")
+
+    tags = service.get_contact("Іван").tags
+    assert tags == {"робота", "vip"}
+    assert presenter.refresh_calls == []
+    assert _contact(result).name.value == "Іван"
+
+
+def test_set_tags_from_text_replaces_existing(ctx, service, presenter):
+    tools.add_contact(ctx, "Іван")
+    service.set_tags_from_text("Іван", "old, work")
+
+    result = tools.set_tags_from_text(ctx, "Іван", "new")
+
+    assert service.get_contact("Іван").tags == {"new"}
+    assert presenter.refresh_calls == []
+    assert _contact(result).name.value == "Іван"
+
+
+def test_set_tags_from_text_parses_separators(ctx, service, presenter):
+    tools.add_contact(ctx, "Іван")
+
+    result = tools.set_tags_from_text(ctx, "Іван", "робота; vip")
+
+    assert service.get_contact("Іван").tags == {"робота", "vip"}
+    assert presenter.refresh_calls == []
+    assert _contact(result).name.value == "Іван"
+
+
+def test_set_tags_from_text_empty_clears_tags(ctx, service, presenter):
+    tools.add_contact(ctx, "Іван")
+    service.set_tags_from_text("Іван", "робота, vip")
+
+    result = tools.set_tags_from_text(ctx, "Іван", "   ")
+
+    assert service.get_contact("Іван").tags == set()
+    assert presenter.refresh_calls == []
+    assert _contact(result).name.value == "Іван"
+
+
+def test_set_tags_from_text_missing_contact_leaves_state_untouched(
+    ctx, service, presenter
+):
+    result = tools.set_tags_from_text(ctx, "Невідомий", "робота")
+
+    assert service.list_contacts() == []
+    assert presenter.refresh_calls == []
+    assert result.metadata is None
+
+
+# ---------- clear_tags ----------
+
+
+def test_clear_tags_removes_all(ctx, service, presenter):
+    tools.add_contact(ctx, "Іван")
+    service.set_tags_from_text("Іван", "робота, vip")
+
+    result = tools.clear_tags(ctx, "Іван")
+
+    assert service.get_contact("Іван").tags == set()
+    assert presenter.refresh_calls == []
+    assert _contact(result).name.value == "Іван"
+
+
+def test_clear_tags_missing_contact_leaves_state_untouched(ctx, service, presenter):
+    result = tools.clear_tags(ctx, "Невідомий")
+
+    assert service.list_contacts() == []
+    assert presenter.refresh_calls == []
+    assert result.metadata is None
+
+
+# ---------- LLM return_value summaries ----------
+
+
+def test_get_contact_return_value_includes_contact_details(ctx, service):
+    tools.add_contact(ctx, "Іван", phone="0501234567", birthday="15.12.1990")
+
+    result = tools.get_contact(ctx, "Іван", fields=list(ContactField))
+
+    assert "Іван" in result.return_value
+    assert "0501234567" in result.return_value
+    assert "15.12.1990" in result.return_value
+
+
+def test_get_contact_default_fields_returns_name_only(ctx, service):
+    tools.add_contact(ctx, "Іван", phone="0501234567", birthday="15.12.1990")
+
+    result = tools.get_contact(ctx, "Іван")
+
+    assert '"name": "Іван"' in result.return_value
+    assert "0501234567" not in result.return_value
+    assert "15.12.1990" not in result.return_value
+
+
+def test_list_contacts_return_value_includes_all_contacts(ctx, service):
+    tools.add_contact(ctx, "Іван")
+    tools.add_contact(ctx, "Олена", birthday="03.01.1988")
+
+    result = tools.list_contacts(ctx, fields=list(ContactField))
+
+    assert '"name": "Іван"' in result.return_value
+    assert '"name": "Олена"' in result.return_value
+    assert "03.01.1988" in result.return_value
+
+
+def test_list_contacts_return_value_truncates_when_over_cap(ctx, monkeypatch):
+    monkeypatch.setattr(settings, "max_contacts_in_tool_return", 2)
+    for index in range(3):
+        tools.add_contact(ctx, f"Contact{index}")
+
+    result = tools.list_contacts(ctx)
+
+    assert "Contact0" in result.return_value
+    assert "Contact1" in result.return_value
+    assert "Contact2" not in result.return_value
+    assert "Ще 1 контакт не показано" in result.return_value
+
+
+def test_search_contacts_return_value_includes_match_details(ctx):
+    tools.add_contact(ctx, "Іван", phone="0501234567")
+
+    result = tools.search_contacts(
+        ctx,
+        "0501234567",
+        fields=[ContactField.NAME, ContactField.PHONES],
+    )
+
+    assert "Іван" in result.return_value
+    assert '"phones": ["+380501234567"]' in result.return_value
+
+
+def test_search_upcoming_birthdays_return_value_includes_records(ctx, monkeypatch):
+    fake = [
+        BirthdaysListContact(
+            name="Іван",
+            birthday="26.05.1990",
+            age="36",
+            congratulation_date="26.05.2026",
+        )
+    ]
+    monkeypatch.setattr(
+        ctx.deps.contacts_service,
+        "search_upcoming_birthdays",
+        lambda days=7: fake,
+    )
+
+    result = tools.search_upcoming_birthdays(ctx, days=10)
+
+    assert "Іван" in result.return_value
+    assert "26.05.1990" in result.return_value
+    assert "26.05.2026" in result.return_value
+
+
+# ---------- fields parameter ----------
+
+
+def test_list_contacts_fields_limits_return_value(ctx):
+    tools.add_contact(ctx, "Іван", phone="0501234567", birthday="15.12.1990")
+
+    result = tools.list_contacts(ctx, fields=[ContactField.BIRTHDAY])
+
+    assert "15.12.1990" in result.return_value
+    assert "0501234567" not in result.return_value
+
+
+def test_get_contact_fields_limits_return_value(ctx):
+    tools.add_contact(ctx, "Іван", phone="0501234567", birthday="15.12.1990")
+
+    result = tools.get_contact(ctx, "Іван", fields=[ContactField.BIRTHDAY])
+
+    assert "15.12.1990" in result.return_value
+    assert "0501234567" not in result.return_value
+
+
+def test_search_contacts_fields_limits_return_value(ctx):
+    tools.add_contact(ctx, "Іван", phone="0501234567", email="ivan@example.com")
+
+    result = tools.search_contacts(ctx, "ivan", fields=[ContactField.EMAILS])
+
+    assert "ivan@example.com" in result.return_value
+    assert "0501234567" not in result.return_value

@@ -17,6 +17,10 @@ class Presenter(Protocol):
         """Refresh the contact list display."""
         ...
 
+    def refresh_contact(self, contact: Contact) -> None:
+        """Refresh the single-contact card display."""
+        ...
+
     def refresh_birthdays(self, birthdays: list[BirthdaysListContact]) -> None:
         """Refresh the upcoming birthdays display."""
         ...

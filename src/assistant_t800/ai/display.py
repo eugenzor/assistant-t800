@@ -32,6 +32,9 @@ def apply_display(presenter: Presenter, payloads: list[DisplayPayload]) -> None:
 
     if payload.kind == "contacts":
         presenter.refresh_contacts(payload.contacts or [])
+    elif payload.kind == "contact":
+        if payload.contact is not None:
+            presenter.refresh_contact(payload.contact)
     elif payload.kind == "birthdays":
         presenter.refresh_birthdays(payload.birthdays or [])
     elif payload.kind == "text":

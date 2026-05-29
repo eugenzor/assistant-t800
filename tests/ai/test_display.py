@@ -99,6 +99,19 @@ def test_apply_display_contacts_refreshes_contact_panel(presenter):
     apply_display(presenter, [payload])
 
     assert presenter.refresh_calls == [[contact]]
+    assert presenter.refresh_contact_calls == []
+    assert presenter.refresh_birthdays_calls == []
+    assert presenter.print_calls == []
+
+
+def test_apply_display_contact_refreshes_contact_card(presenter):
+    contact = Contact(Name("Іван"))
+    payload = DisplayPayload(kind="contact", contact=contact)
+
+    apply_display(presenter, [payload])
+
+    assert presenter.refresh_contact_calls == [contact]
+    assert presenter.refresh_calls == []
     assert presenter.refresh_birthdays_calls == []
     assert presenter.print_calls == []
 
