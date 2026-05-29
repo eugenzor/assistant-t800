@@ -90,13 +90,16 @@ domain → repositories → services → application → interfaces (CLI / TUI)
 | **storage** | Pickle-персистенс із відновленням після збоїв | `src/assistant_t800/storage/` |
 | **suggestions** | Fuzzy-match + AI-fallback для виправлення опечаток | `src/assistant_t800/suggestions/` |
 | **ai** | Pydantic-AI агент «Арні» з інструментами для TUI | `src/assistant_t800/ai/` |
+| **info_validator** | Класифікація токенів (phone/email/birthday/address) з опційним AI-fallback | `src/assistant_t800/info_validator/` |
 
 ### Команди CLI
 
 Повний довідник — у [commands-help.md](commands-help.md). Тут — згруповано за призначенням:
 
 **Створення та перегляд**
-- `add "Іван Петренко" 0991234567 ivan@example.com "Київ" 25.05.1990` — додати контакт
+- `add "Іван Петренко" +380991234567 ivan@example.com country=UA city=Київ line="вул. Хрещатик, 1" 25.05.1990` — додати контакт
+  - Телефон у форматі E.164 (`+380…`) або як 10 цифр національного формату (`0991234567`)
+  - Адресу можна задати структуровано через `key=value` токени (`country=` / `city=` / `line=` / `zip=` / `region=`) або як одну строку (legacy fallback)
 - `contacts` — список усіх
 - `get "Іван Петренко"` — показати одного
 
@@ -122,3 +125,17 @@ domain → repositories → services → application → interfaces (CLI / TUI)
 **Аліаси:** кожна команда має англійський, український і **«кириличний QWERTY»** аліас. Приклад: `remove` ≡ `delete` ≡ `видали` ≡ `куьщму`.
 
 **Теги:** повноцінно підтримуються. Зберігаються нормалізованими (lowercase, без дублікатів), доступні через `search-tag`, керуються через `edit-tags` (ручне інлайн-редагування) і `suggest-tags` (AI). Окремих `add-tag` / `remove-tag` команд немає — все робиться через `edit-tags`.
+
+### Валідація полів (`src/assistant_t800/domain/fields.py`, `domain/phone_validation.py`, `domain/country.py`)
+
+| Поле | Правила |
+|---|---|
+| name | непорожній рядок |
+| phone | приймає E.164 (`+380501234567`), національний формат (`0501234567`), з роздільниками/дужками; зберігається у канонічному E.164. Опційний AI-fallback (`domain/phone_ai.py`) для нерозпізнаних форматів — класифікує країну/оператора |
+| email | прагматичний regex (`@` + домен) |
+| birthday | `DD.MM.YYYY` / `DD-MM-YYYY` / `DD/MM/YYYY`, не в майбутньому |
+| address | структурований запис (`AddressInput`): обов'язкові `country`, `city`, `line`; опційні `zip_code`, `region`. Country резолвиться через `domain/country.py` (ISO-коди + укр./рос./англ. синоніми: `UA` / `ukraine` / `україна` тощо) |
+
+### Універсальний валідатор токенів (`src/assistant_t800/info_validator/`)
+
+Окремий шар-фасад `InfoValidator`, який класифікує довільні рядки в `phone` / `email` / `birthday` / `address` / `unknown` за допомогою регекспів і опційного AI-fallback. Перший невпізнаний токен автоматично «промоутиться» в адресу. Поки що використовується як інфраструктура для розширення; основний парсинг команд (`add`, `set-address`) використовує деталізовані парсери в `application/contacts_args.py`.
