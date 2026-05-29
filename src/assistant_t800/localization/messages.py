@@ -147,7 +147,8 @@ class Message(MultiLangEnum):
     REMOVE_NOTE_DESCRIPTION = auto()
     EDIT_TAGS_DESCRIPTION = auto()
     EDIT_TAGS_INPUT_HINT = auto()
-
+    SUGGEST_TAGS_DESCRIPTION = auto()
+    SUGGEST_TAGS_NONE = auto()
 
 class ErrorCode(MultiLangEnum):
     """Localized application error codes."""
@@ -178,3 +179,5 @@ class ErrorCode(MultiLangEnum):
     INVALID_DAYS = auto()
     NOT_IMPLEMENTED = auto()
     UNEXPECTED_ERROR = auto()
+    SUGGEST_TAGS_FAILED = auto()
+    SUGGEST_TAGS_INTERACTIVE_ONLY = auto()

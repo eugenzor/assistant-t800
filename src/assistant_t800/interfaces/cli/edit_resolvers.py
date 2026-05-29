@@ -7,7 +7,7 @@ from assistant_t800.application.context import AppContext
 from assistant_t800.application.enums import SystemValue
 from assistant_t800.application.results import AppResult
 from assistant_t800.interfaces.cli.prompting import EditableInputFunc, TextInputFunc
-from assistant_t800.localization import ErrorCode
+from assistant_t800.localization import ErrorCode, Message
 
 if TYPE_CHECKING:
     from assistant_t800.interfaces.cli.presenter import CliPresenter
@@ -140,6 +140,98 @@ class TagEditResolver:
             raw_input=raw_input,
             registry=self._context.registry,
             command_name=self.EDIT_TAGS_COMMAND,
+        )
+
+        return result
+
+    @staticmethod
+    def _build_input(command_name: str, name: str, value: str) -> str:
+        """Build canonical command input."""
+        result = f"{command_name} {_quote_arg(name)} {_quote_arg(value)}"
+
+        return result
+
+
+class SuggestTagsResolver:
+    """Resolve interactive AI tag suggestion commands before dispatch.
+
+    Merges existing tags with AI suggestions before handing off to the
+    edit-tags handler, preserving existing tags through the wipe-and-replace
+    semantics of edit-tags.
+    """
+
+    SUGGEST_TAGS_COMMAND = "suggest-tags"
+    EDIT_TAGS_COMMAND = "edit-tags"
+
+    def __init__(
+        self,
+        *,
+        context: AppContext,
+        presenter: "CliPresenter",
+        editable_func: EditableInputFunc | None,
+    ) -> None:
+        self._context = context
+        self._presenter = presenter
+        self._editable_func = editable_func
+
+    def resolve(self, raw_input: str) -> str | AppResult:
+        """Return resolved command input or direct app result when needed."""
+        owner = self._resolve_owner(raw_input)
+
+        if owner is None or self._editable_func is None:
+            result = raw_input
+        else:
+            result = self._resolve_ai_suggest(owner)
+
+        return result
+
+    def _resolve_ai_suggest(self, name: str) -> str | AppResult:
+        """Run AI tag suggestion + inline editor for one contact."""
+        try:
+            contact = self._context.contacts.get_contact(name)
+        except KeyError:
+            result = AppResult.warning(ErrorCode.NAME_NOT_FOUND, query=name)
+        else:
+            result = self._suggest_for_contact(contact, name)
+
+        return result
+
+    def _suggest_for_contact(self, contact, name: str) -> str | AppResult:
+        """Call the AI, merge with existing, prompt the user, and rewrite."""
+        try:
+            ai_new = self._context.contacts.suggest_tags(name)
+        except Exception as error:
+            result = AppResult.fail(
+                ErrorCode.SUGGEST_TAGS_FAILED,
+                reason=str(error),
+            )
+        else:
+            if not ai_new:
+                result = AppResult.info(Message.SUGGEST_TAGS_NONE, name=name)
+            else:
+                merged = contact.tags | set(ai_new)
+                default_value = self._context.contacts.format_tags(merged)
+                edited = self._presenter.request_tag_edit(
+                    contact=contact,
+                    current_tags=default_value,
+                    editable_func=self._editable_func,
+                )
+
+                if edited is None:
+                    result = AppResult.ok(data=contact)
+                else:
+                    result = self._build_input(
+                        self.EDIT_TAGS_COMMAND, name, edited
+                    )
+
+        return result
+
+    def _resolve_owner(self, raw_input: str) -> str | None:
+        """Return contact name when input requests interactive AI suggestion."""
+        result = _resolve_interactive_owner(
+            raw_input=raw_input,
+            registry=self._context.registry,
+            command_name=self.SUGGEST_TAGS_COMMAND,
         )
 
         return result

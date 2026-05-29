@@ -2,14 +2,95 @@
 
 import re
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from typing import Optional
 
 from assistant_t800.application.enums import SystemValue
 from assistant_t800.domain.birthdays import BirthdaysListContact
 from assistant_t800.domain.contacts import Contact
-from assistant_t800.domain.fields import Name
+from assistant_t800.domain.fields import Name, Phone, Address, Birthday
 from assistant_t800.repositories.contacts import ContactsRepository
+
+# Maximum number of AI-suggested tags returned per request.
+MAX_SUGGESTED_TAGS = 5
+
+
+def mask_phones(phones: Sequence[Phone]) -> list[str]:
+    """Mask phone numbers; keep only ones with a country-code prefix."""
+    masked = [
+        phone.value[:4] + "*" * (len(phone.value) - 4)
+        for phone in phones
+        if phone.value.startswith("+")
+    ]
+    return masked
+
+def address_geo_fields(address: Address) -> dict[str, str] | None:
+    """Return geo fields from a structured address. Today: always None.
+
+    TODO: replace with structured access after Address refactor — extract
+    country, city, region from the structured record. Address Line is
+    never returned (street/building PII).
+    """
+    return None
+
+def birthday_month(birthday: Birthday) -> str | None:
+    """Return a month of the birthday."""
+    if not birthday:
+        return None
+    return birthday.date.strftime("%B").lower()
+
+def build_tag_suggestion_snapshot(contact: Contact) -> dict:
+    """Build a snapshot of a contact for tag suggestion."""
+    snapshot = {"name": contact.name.value}
+
+    if len(contact.tags) > 0:
+        snapshot["tags"] = sorted(contact.tags)
+
+    if contact.note and contact.note != SystemValue.EMPTY_TEXT.value:
+        snapshot["note"] = contact.note
+
+    if contact.phones:
+        masked = mask_phones(contact.phones)
+        if masked:
+            snapshot["phones"] = masked
+
+    if contact.address:
+        geo = address_geo_fields(contact.address)
+        if geo:
+            snapshot["geo_location"] = geo
+
+    if contact.birthday:
+        snapshot["birthday_month"] = birthday_month(contact.birthday)
+
+    return snapshot
+
+
+def clean_suggested_tags(raw_tags: Iterable[str], existing: set[str]) -> list[str]:
+    """Normalize raw LLM tag output, drop duplicates and empties, cap the result.
+
+    Args:
+        raw_tags: Raw tag list from the LLM.
+        existing: The contact's existing tags (already normalized).
+
+    Returns:
+        Cleaned tag list, in the order proposed, with no duplicates against
+        ``existing`` or within the result, truncated to ``MAX_SUGGESTED_TAGS``.
+    """
+    cleaned: list[str] = []
+    seen: set[str] = set()
+
+    for tag in raw_tags:
+        normalized = tag.strip().casefold()
+        if not normalized:
+            continue
+        if normalized in existing or normalized in seen:
+            continue
+        cleaned.append(normalized)
+        seen.add(normalized)
+        if len(cleaned) >= MAX_SUGGESTED_TAGS:
+            break
+
+    return cleaned
 
 
 class ContactsService:
@@ -149,6 +230,31 @@ class ContactsService:
         contact.clear_tags()
 
         return contact
+
+    def tag_suggestion_snapshot(self, name: str) -> dict:
+        """Return an LLM-ready snapshot of a contact for tag suggestion."""
+        contact = self.get_contact(name)
+        return build_tag_suggestion_snapshot(contact)
+
+    def suggest_tags(self, name: str) -> list[str]:
+        """Return AI-suggested tags for a contact, cleaned and capped.
+
+        Loads the contact, builds an LLM snapshot, calls the tag-suggestion
+        model, then normalizes the response, drops duplicates against the
+        contact's existing tags, and caps the result at
+        :data:`MAX_SUGGESTED_TAGS`.
+
+        Raises:
+            KeyError: If the contact does not exist.
+        """
+        # Lazy import to break the cycle:
+        # ai.agent -> ai.deps -> services.contacts.
+        from assistant_t800.ai.agent import suggest_tags as _llm_suggest_tags
+
+        contact = self.get_contact(name)
+        snapshot = build_tag_suggestion_snapshot(contact)
+        raw_tags = _llm_suggest_tags(snapshot)
+        return clean_suggested_tags(raw_tags, contact.tags)
 
     @classmethod
     def parse_tags(cls, raw_tags: str) -> tuple[str, ...]:

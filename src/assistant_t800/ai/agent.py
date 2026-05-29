@@ -3,11 +3,12 @@
 Builds a ``pydantic_ai``-based agent. Tool functions are defined in
 :mod:`assistant_t800.ai.tools`.
 """
-
+import json
 import os
 from functools import lru_cache
 
 from pydantic_ai import Agent
+from pydantic import BaseModel
 
 from assistant_t800.ai.deps import AgentDeps
 from assistant_t800.ai.display import apply_display, extract_display_payloads
@@ -162,3 +163,73 @@ def run_chat(message: str, deps: AgentDeps) -> str:
     )
 
     return result.output
+
+
+# System prompt for the one-shot tag-suggestion agent.
+_TAG_SUGGESTION_PROMPT = """\
+Ти — спеціалізований класифікатор контактів. Тобі надсилають JSON-знімок контакту,
+а ти повертаєш короткі теги для його категоризації.
+
+Формат відповіді:
+- Поверни лише JSON, що відповідає схемі: {"tags": ["...", "..."]}.
+- Без коментарів, пояснень або тексту поза JSON.
+
+Правила для тегів:
+1. Максимум 5 тегів. Менше — теж добре, якщо вхідних сигналів небагато.
+2. Кожен тег — 1–2 слова, у нижньому регістрі.
+3. Без знаків пунктуації, лапок, емоджі. Дозволено дефіс для складених тегів
+(наприклад, kyiv-office, family-friend).
+4. Тег має описувати ТЕМУ АБО КАТЕГОРІЮ (робота, клієнт, сім'я, friend, college),
+а не факти про дані (+380, має-телефон, день-народження-травень).
+5. Якщо у вхідному полі "tags" вже є теги — НЕ повторюй їх і дотримуйся їхнього стилю
+(якщо існуючі однослівні — твої теж однослівні; якщо з дефісами — твої також з дефісами).
+
+Мова:
+- Виводь теги тією ж мовою, що домінує у вхідних даних (насамперед у полі "note";
+якщо "note" відсутній — за полем "name").
+- Якщо вхід змішаний — орієнтуйся на мову "note".
+- Якщо сигналу мови немає — за замовчуванням українська.
+
+Якщо вхідні дані не містять корисного сигналу (немає note, немає інформативної адреси,
+немає інформативних існуючих тегів) — поверни порожній масив: {"tags": []}.
+
+Приклади:
+
+Вхід: {"name": "Аліса", "note": "Менеджер з продажів у B2B-стартапі", "tags": ["клієнт"]}
+Вихід: {"tags": ["продажі", "b2b", "менеджер", "стартап"]}
+
+Вхід: {"name": "John Smith", "note": "Family friend from college, lives in NYC", "tags": []}
+Вихід: {"tags": ["family", "friend", "college", "nyc"]}
+
+Вхід: {"name": "Боб"}
+Вихід: {"tags": []}
+"""
+
+
+class _TagSuggestion(BaseModel):
+    """Structured output schema for tag suggestions."""
+
+    tags: list[str]
+
+
+@lru_cache(maxsize=1)
+def _get_tag_suggest_agent() -> Agent[None, _TagSuggestion]:
+    """Create and return a configured singleton AI agent for tag suggestions."""
+    model = os.environ.get("ASSISTANT_T800_MODEL", DEFAULT_MODEL)
+    return Agent(model, output_type=_TagSuggestion, system_prompt=_TAG_SUGGESTION_PROMPT)
+
+
+def suggest_tags(snapshot: dict) -> list[str]:
+    """Call the LLM with a contact snapshot and return raw suggested tags.
+
+    Args:
+        snapshot: Contact snapshot dict produced by
+            :func:`assistant_t800.services.contacts.build_tag_suggestion_snapshot`.
+
+    Returns:
+        Raw tag list from the model. Normalization, dedup, and the
+        ``<=5`` cap are the caller's responsibility.
+    """
+    payload = json.dumps(snapshot, ensure_ascii=False)
+    result = _get_tag_suggest_agent().run_sync(payload)
+    return result.output.tags
