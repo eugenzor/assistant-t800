@@ -4,9 +4,10 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Final
 
 from rich import box
+from rich.table import Table
 
 from assistant_t800.domain.contacts import Contact
-from assistant_t800.interfaces.cli.metrics import get_actual_width, is_narrow_layout
+from assistant_t800.interfaces.cli.metrics import NARROW_LAYOUT_WIDTH, get_actual_width
 from assistant_t800.localization import Message
 
 if TYPE_CHECKING:
@@ -23,7 +24,7 @@ def display_contacts_table(
     title: str,
 ) -> None:
     """Display contacts as a Rich table."""
-    table = _build_contacts_table(presenter=presenter, contacts=contacts)
+    table = build_contacts_table(table_cls=presenter.table_cls, contacts=contacts)
 
     presenter.display_results_title(title)
     presenter.console.print(table)
@@ -37,22 +38,23 @@ def is_contact_list(data: object) -> bool:
     return result
 
 
-def _build_contacts_table(
+def build_contacts_table(
     *,
-    presenter: "RichCliPresenter",
+    table_cls: type,
     contacts: Sequence[Contact],
-    title: str = "",
-):
+    width: int | None = None,
+) -> Table:
     """Build contacts table."""
-    is_narrow = is_narrow_layout()
+    resolved_width = width if width is not None else get_actual_width()
+    is_narrow = NARROW_LAYOUT_WIDTH > resolved_width
 
-    table = presenter.table_cls(
+    table = table_cls(
         box=box.SIMPLE,
         border_style="grey35",
         header_style="white",
         row_styles=("", "dim"),
         expand=False,
-        width=get_actual_width(),
+        width=resolved_width,
     )
 
     # table.add_column("№", justify="right", no_wrap=True, width=2)
