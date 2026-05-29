@@ -7,6 +7,7 @@ from assistant_t800.application.results import AppResult
 from assistant_t800.interfaces.cli.edit_resolvers import (
     NoteEditResolver,
     TagEditResolver,
+    SuggestTagsResolver,
 )
 from assistant_t800.interfaces.cli.prompting import (
     InputFunc,
@@ -46,6 +47,11 @@ class CliRunner:
             text_input_func=text_input_func,
         )
         self._tag_edit_resolver = TagEditResolver(
+            context=dispatcher.context,
+            presenter=presenter,
+            editable_func=editable_func,
+        )
+        self._suggest_tags_resolver = SuggestTagsResolver(
             context=dispatcher.context,
             presenter=presenter,
             editable_func=editable_func,
@@ -127,11 +133,14 @@ class CliRunner:
         note_input = self._note_edit_resolver.resolve(raw_input)
 
         if isinstance(note_input, AppResult):
-            result = note_input
-        else:
-            result = self._tag_edit_resolver.resolve(note_input)
+            return note_input
 
-        return result
+        tag_input = self._tag_edit_resolver.resolve(note_input)
+
+        if isinstance(tag_input, AppResult):
+            return tag_input
+
+        return self._suggest_tags_resolver.resolve(tag_input)
 
     def _confirm_and_dispatch(self, command_input: str, result: AppResult) -> AppResult:
         """Ask for confirmation and execute the resolved command when accepted."""

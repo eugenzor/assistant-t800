@@ -237,6 +237,18 @@ def edit_tags(context: AppContext) -> AppResult:
     return result
 
 
+def suggest_tags(_context: AppContext) -> AppResult:
+    """Stub: this command is interactive-only via SuggestTagsResolver.
+
+    Reached only when the resolver couldn't intercept (e.g., prompt_toolkit
+    unavailable). Tells the user to run interactively or use edit-tags.
+    """
+    return AppResult.fail(
+        ErrorCode.SUGGEST_TAGS_INTERACTIVE_ONLY,
+        command="suggest-tags",
+    )
+
+
 def add_contact(context: AppContext) -> AppResult:
     """Create a contact from raw contact arguments."""
     parsed = ContactArgumentsParser.parse_add(context.raw_args)
