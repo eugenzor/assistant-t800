@@ -66,6 +66,29 @@ The command opens an inline editable field under the contact card.
 - Empty saved tag text means "remove all tags" and requires confirmation.
 - `Esc` cancels editing and does not change tags.
 
+### AI Tag Suggestions
+
+Let the AI pick tags for a contact:
+
+```bash
+suggest-tags <name>
+```
+
+How it works:
+
+- The AI looks at the contact's name, country, city, note, birthday month and current tags, then suggests up to 5 short tags.
+- It writes tags in the same language as the contact's data (Ukrainian or English).
+- The suggested tags are joined with the existing ones and shown in the same editable line as `edit-tags`.
+- You can edit, add or remove tags, then `Enter` to save or `Esc` to cancel. Nothing is saved until you confirm.
+
+Why it's useful:
+
+- You don't have to think up tags yourself — the AI reads contact info and does it.
+- You stay in control: you always see and edit the tags before they are saved.
+- Manual tagging still works the same; this is just a faster way to add tags.
+
+Needs a `GOOGLE_API_KEY` (see below). The command only works interactively; if `prompt_toolkit` is missing, use `edit-tags` instead.
+
 ### Search
 
 Implemented commands:
