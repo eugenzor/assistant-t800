@@ -6,6 +6,7 @@ from assistant_t800.application import handlers
 from assistant_t800.application.context import AppContext
 from assistant_t800.application.enums import SystemValue
 from assistant_t800.application.results import ResultStatus
+from assistant_t800.domain.fields import AddressInput
 from assistant_t800.localization import ErrorCode, Message
 from assistant_t800.repositories.contacts import ContactsRepository
 from assistant_t800.services.contacts import ContactsService
@@ -142,9 +143,13 @@ def test_search_contacts_includes_matching_contacts_in_data():
         "John Smith",
         phone="0991112233",
         email="john@example.com",
-        address="New York",
+        address=AddressInput(country="US", city="New York", line="5th Ave"),
     )
-    context.contacts.add_contact("Марія", phone="0506666666", address="Київ")
+    context.contacts.add_contact(
+        "Марія",
+        phone="0506666666",
+        address=AddressInput(country="UA", city="Київ", line="вул. X"),
+    )
 
     result = handlers.search_contacts(context)
 
@@ -344,19 +349,27 @@ def test_edit_tags_missing_contact_returns_contact_not_found_error():
 
 def test_add_contact_creates_full_ukrainian_contact_from_raw_args():
     context = _context(
-        raw_args=("Іван", "0501234567", "ivan@example.com", "01.01.1990", "Київ"),
+        raw_args=(
+            "Іван",
+            "0501234567",
+            "ivan@example.com",
+            "01.01.1990",
+            "country=UA",
+            "city=Київ",
+            "line=вул. Хрещатик 1",
+        ),
     )
 
     result = handlers.add_contact(context)
 
     assert result.success is True
     contact = context.contacts.get_contact("Іван")
-    assert [p.value for p in contact.phones] == ["0501234567"]
+    assert [p.value for p in contact.phones] == ["+380501234567"]
     assert [e.value for e in contact.emails] == ["ivan@example.com"]
     assert contact.birthday is not None
     assert contact.birthday.value == "01.01.1990"
     assert contact.address is not None
-    assert contact.address.value == "Київ"
+    assert contact.address.value == "UA, Київ, вул. Хрещатик 1"
 
 
 def test_add_contact_creates_full_english_contact_from_raw_args():
@@ -366,7 +379,9 @@ def test_add_contact_creates_full_english_contact_from_raw_args():
             "0991112233",
             "john@example.com",
             "30.05.1990",
-            "New York",
+            "country=US",
+            "city=New York",
+            "line=5th Ave",
         ),
     )
 
@@ -375,7 +390,7 @@ def test_add_contact_creates_full_english_contact_from_raw_args():
     assert result.success is True
     contact = context.contacts.get_contact("john smith")
     assert contact.name.value == "John Smith"
-    assert contact.address.value == "New York"
+    assert contact.address.value == "US, New York, 5th Ave"
 
 
 def test_add_contact_no_args_fails_with_missing_arguments():
@@ -403,7 +418,9 @@ def test_add_contact_duplicate_name_fails_with_validation_error():
 
 
 def test_set_address_updates_english_value():
-    context = _context(args={"name": "John Smith", "address": "New York"})
+    context = _context(
+        raw_args=("John Smith", "country=US", "city=New York", "line=5th Ave"),
+    )
     context.contacts.add_contact("John Smith")
 
     result = handlers.set_address(context)
@@ -411,11 +428,13 @@ def test_set_address_updates_english_value():
     assert result.success is True
     contact = context.contacts.get_contact("John Smith")
     assert contact.address is not None
-    assert contact.address.value == "New York"
+    assert contact.address.value == "US, New York, 5th Ave"
 
 
 def test_set_address_missing_contact_returns_contact_not_found():
-    context = _context(args={"name": "Невідомий", "address": "Київ"})
+    context = _context(
+        raw_args=("Невідомий", "country=UA", "city=Київ", "line=вул. X"),
+    )
 
     result = handlers.set_address(context)
 
@@ -458,7 +477,7 @@ def test_add_phone_appends_multiple_values():
 
     assert result.success is True
     phones = [p.value for p in context.contacts.get_contact("Іван").phones]
-    assert phones == ["0501112233", "0509998877"]
+    assert phones == ["+380501112233", "+380509998877"]
 
 
 def test_add_phone_missing_value_fails_with_missing_arguments():
@@ -564,7 +583,11 @@ def test_remove_contact_confirmed_missing_returns_contact_not_found():
 )
 def test_scalar_remove_unconfirmed_returns_confirmation(handler, confirm_code):
     context = _context(args={"name": "Іван"}, confirmed=False)
-    context.contacts.add_contact("Іван", address="Київ", birthday="01.01.1990")
+    context.contacts.add_contact(
+        "Іван",
+        address=AddressInput(country="UA", city="Київ", line="вул. X"),
+        birthday="01.01.1990",
+    )
     context.contacts.set_note("Іван", "важливий клієнт")
 
     result = handler(context)
@@ -576,7 +599,10 @@ def test_scalar_remove_unconfirmed_returns_confirmation(handler, confirm_code):
 
 def test_remove_address_confirmed_clears_value():
     context = _context(args={"name": "Іван"}, confirmed=True)
-    context.contacts.add_contact("Іван", address="Київ")
+    context.contacts.add_contact(
+        "Іван",
+        address=AddressInput(country="UA", city="Київ", line="вул. X"),
+    )
 
     result = handlers.remove_address(context)
 
@@ -629,7 +655,7 @@ def test_remove_phone_with_explicit_value_confirmed_removes_value():
 
     assert result.success is True
     phones = [p.value for p in context.contacts.get_contact("Іван").phones]
-    assert phones == ["0509998877"]
+    assert phones == ["+380509998877"]
 
 
 def test_remove_phone_without_value_when_field_empty_fails():

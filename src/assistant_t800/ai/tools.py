@@ -12,6 +12,7 @@ from pydantic_ai.messages import ToolReturn
 
 from assistant_t800.ai.deps import AgentDeps
 from assistant_t800.ai.results import DisplayPayload
+from assistant_t800.domain.fields import AddressInput
 
 
 def _ok(message: str, display: DisplayPayload | None = None) -> ToolReturn[str]:
@@ -34,10 +35,36 @@ def add_contact(
     name: str,
     phone: Optional[str] = None,
     email: Optional[str] = None,
-    address: Optional[str] = None,
+    address_country: Optional[str] = None,
+    address_city: Optional[str] = None,
+    address_line: Optional[str] = None,
+    address_zip: Optional[str] = None,
+    address_region: Optional[str] = None,
     birthday: Optional[str] = None,
 ) -> ToolReturn[str]:
-    """Create a new contact and refresh the UI contact list."""
+    """Create a new contact and refresh the UI contact list.
+
+    Address (if provided) is structured: ``address_country``, ``address_city``
+    and ``address_line`` are all required together; ``address_zip`` and
+    ``address_region`` are optional. Omit all address fields to skip address.
+    """
+    address: Optional[AddressInput] = None
+
+    if any((address_country, address_city, address_line)):
+        if not (address_country and address_city and address_line):
+            return _fail(
+                "Для адреси потрібні всі поля: address_country, address_city, "
+                "address_line"
+            )
+
+        address = AddressInput(
+            country=address_country,
+            city=address_city,
+            line=address_line,
+            zip_code=address_zip,
+            region=address_region,
+        )
+
     try:
         contact = ctx.deps.contacts_service.add_contact(
             name,
@@ -198,10 +225,31 @@ def search_upcoming_birthdays(
     )
 
 
-def set_address(ctx: RunContext[AgentDeps], name: str, address: str) -> ToolReturn[str]:
-    """Set or update an existing contact address."""
+def set_address(
+    ctx: RunContext[AgentDeps],
+    name: str,
+    country: str,
+    city: str,
+    line: str,
+    zip_code: Optional[str] = None,
+    region: Optional[str] = None,
+) -> ToolReturn[str]:
+    """Set or update an existing contact address.
+
+    Address is a structured record. Required fields: ``country``, ``city`` and
+    ``line`` (street address). ``zip_code`` and ``region`` are optional.
+    """
     try:
-        ctx.deps.contacts_service.set_address(name, address)
+        ctx.deps.contacts_service.set_address(
+            name,
+            AddressInput(
+                country=country,
+                city=city,
+                line=line,
+                zip_code=zip_code,
+                region=region,
+            ),
+        )
     except (KeyError, ValueError) as exc:
         return _fail(f"Не вдалося встановити адресу: {exc}")
 

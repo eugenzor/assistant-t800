@@ -71,9 +71,22 @@ class Contact:
 
         return result
 
-    def set_address(self, address: str) -> None:
-        """Set or replace the contact address."""
-        self.address = Address(address)
+    def set_address(
+        self,
+        country: str,
+        city: str,
+        line: str,
+        zip_code: Optional[str] = None,
+        region: Optional[str] = None,
+    ) -> None:
+        """Set or replace the contact address from structured components."""
+        self.address = Address(
+            country=country,
+            city=city,
+            line=line,
+            zip_code=zip_code,
+            region=region,
+        )
 
     def remove_address(self) -> None:
         """Remove the contact address."""
