@@ -151,7 +151,9 @@ def build_registry() -> dict[str, Command]:
             name="set-address",
             handler=set_address,
             description=Message.SET_ADDRESS_DESCRIPTION,
-            args=("name", "address"),
+            parse_args=False,
+            usage="set-address <name> country=<...> city=<...> line=<...> "
+            "[zip=<...>] [region=<...>]",
             aliases=(
                 "додай адресу",
                 "іуе-фввкуіі",

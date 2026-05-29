@@ -262,13 +262,17 @@ def add_contact(context: AppContext) -> AppResult:
 
 
 def set_address(context: AppContext) -> AppResult:
-    """Set or replace a contact address."""
+    """Set or replace a contact address from ``key=value`` arguments."""
+    parsed = ContactArgumentsParser.parse_set_address(context.raw_args)
+
+    if isinstance(parsed, AppResult):
+        return parsed
+
+    name, address = parsed
+
     return _mutate_contact(
         context=context,
-        action=lambda: context.contacts.set_address(
-            context.args["name"],
-            context.args["address"],
-        ),
+        action=lambda: context.contacts.set_address(name, address),
         message_code=Message.CONTACT_UPDATED,
         field="address",
     )

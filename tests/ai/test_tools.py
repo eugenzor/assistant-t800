@@ -40,7 +40,7 @@ def test_add_contact_creates_contact_and_returns_display(ctx, service, presenter
     assert len(contacts) == 1, "exactly one contact should be stored"
     contact = contacts[0]
     assert contact.name.value == "Іван"
-    assert [p.value for p in contact.phones] == ["0501234567"]
+    assert [p.value for p in contact.phones] == ["+380501234567"]
     assert [e.value for e in contact.emails] == ["ivan@example.com"]
     assert presenter.refresh_calls == []
     assert [c.name.value for c in _contacts(result)] == ["Іван"]
@@ -229,15 +229,19 @@ def test_search_upcoming_birthdays_returns_birthday_records(
 def test_set_address_updates_value(ctx, service, presenter):
     tools.add_contact(ctx, "Іван")
 
-    result = tools.set_address(ctx, "Іван", "Київ, Хрещатик 1")
+    result = tools.set_address(
+        ctx, "Іван", country="UA", city="Київ", line="Хрещатик 1"
+    )
 
-    assert service.get_contact("Іван").address.value == "Київ, Хрещатик 1"
+    assert service.get_contact("Іван").address.value == "UA, Київ, Хрещатик 1"
     assert presenter.refresh_calls == []
     assert len(_contacts(result)) == 1
 
 
 def test_set_address_missing_contact_leaves_state_untouched(ctx, service, presenter):
-    result = tools.set_address(ctx, "Невідомий", "Київ")
+    result = tools.set_address(
+        ctx, "Невідомий", country="UA", city="Київ", line="вул. X"
+    )
 
     assert service.list_contacts() == [], (
         "missing-contact errors must not create a placeholder contact"
@@ -246,13 +250,13 @@ def test_set_address_missing_contact_leaves_state_untouched(ctx, service, presen
     assert result.metadata is None
 
 
-def test_set_address_empty_value_does_not_set(ctx, service, presenter):
+def test_set_address_invalid_country_does_not_set(ctx, service, presenter):
     tools.add_contact(ctx, "Іван")
 
-    result = tools.set_address(ctx, "Іван", "   ")
+    result = tools.set_address(ctx, "Іван", country="Narnia", city="X", line="Y")
 
     assert service.get_contact("Іван").address is None, (
-        "whitespace-only address must be rejected and leave the field unset"
+        "invalid country must be rejected and leave the field unset"
     )
     assert presenter.refresh_calls == []
     assert result.metadata is None
@@ -364,7 +368,7 @@ def test_add_phones_appends_multiple(ctx, service, presenter):
     result = tools.add_phones(ctx, "Іван", ["0501112233", "0509998877"])
 
     phones = [item.value for item in service.get_contact("Іван").phones]
-    assert phones == ["0501112233", "0509998877"]
+    assert phones == ["+380501112233", "+380509998877"]
     assert presenter.refresh_calls == []
     assert len(_contacts(result)) == 1
 
@@ -436,7 +440,13 @@ def test_remove_contact_missing_leaves_state_untouched(ctx, service, presenter):
 
 
 def test_remove_address_clears_value(ctx, service):
-    tools.add_contact(ctx, "Іван", address="Київ")
+    tools.add_contact(
+        ctx,
+        "Іван",
+        address_country="UA",
+        address_city="Київ",
+        address_line="вул. X",
+    )
 
     tools.remove_address(ctx, "Іван")
 
@@ -482,7 +492,7 @@ def test_remove_phones_removes_listed_values(ctx, service, presenter):
     result = tools.remove_phones(ctx, "Іван", ["0501112233"])
 
     remaining = [item.value for item in service.get_contact("Іван").phones]
-    assert remaining == ["0509998877"]
+    assert remaining == ["+380509998877"]
     assert presenter.refresh_calls == []
     assert len(_contacts(result)) == 1
 
@@ -493,7 +503,7 @@ def test_remove_phones_unknown_phone_leaves_state_untouched(ctx, service, presen
     result = tools.remove_phones(ctx, "Іван", ["0509998877"])
 
     phones = [item.value for item in service.get_contact("Іван").phones]
-    assert phones == ["0501112233"], (
+    assert phones == ["+380501112233"], (
         "removing a non-existent phone must not affect existing phones"
     )
     assert presenter.refresh_calls == []

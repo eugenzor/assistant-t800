@@ -8,7 +8,7 @@ from typing import Optional
 from assistant_t800.application.enums import SystemValue
 from assistant_t800.domain.birthdays import BirthdaysListContact
 from assistant_t800.domain.contacts import Contact
-from assistant_t800.domain.fields import Name, Phone, Address, Birthday
+from assistant_t800.domain.fields import AddressInput, Name, Phone, Address, Birthday
 from assistant_t800.repositories.contacts import ContactsRepository
 
 # Maximum number of AI-suggested tags returned per request.
@@ -111,7 +111,7 @@ class ContactsService:
         email: Optional[str] = None,
         phones: Sequence[str] = (),
         emails: Sequence[str] = (),
-        address: Optional[str] = None,
+        address: Optional[AddressInput] = None,
         birthday: Optional[str] = None,
     ) -> Contact:
         """Create and store a new contact."""
@@ -123,8 +123,14 @@ class ContactsService:
         for value in self._merge_values(email, emails):
             contact.add_email(value)
 
-        if address:
-            contact.set_address(address)
+        if address is not None:
+            contact.set_address(
+                country=address.country,
+                city=address.city,
+                line=address.line,
+                zip_code=address.zip_code,
+                region=address.region,
+            )
 
         if birthday:
             contact.set_birthday(birthday)
@@ -174,10 +180,16 @@ class ContactsService:
         """Search contacts with upcoming congratulation dates."""
         return self._repo.search_upcoming_birthdays(days)
 
-    def set_address(self, name: str, address: str) -> Contact:
+    def set_address(self, name: str, address: AddressInput) -> Contact:
         """Set or replace a contact address."""
         contact = self.get_contact(name)
-        contact.set_address(address)
+        contact.set_address(
+            country=address.country,
+            city=address.city,
+            line=address.line,
+            zip_code=address.zip_code,
+            region=address.region,
+        )
 
         return contact
 

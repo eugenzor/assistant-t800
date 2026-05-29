@@ -59,25 +59,117 @@ def test_name_rejects_none_like_empty_value():
 # ---------- Phone ----------
 
 
-def test_phone_accepts_ten_digit_value():
+def test_phone_stores_e164_canonical_value():
     phone = Phone("0501234567")
 
-    assert phone.value == "0501234567"
+    assert phone.value == "+380501234567"
+    assert phone.national == "0501234567"
 
 
 def test_phone_strips_surrounding_whitespace():
     phone = Phone("  0501234567  ")
 
-    assert phone.value == "0501234567"
+    assert phone.value == "+380501234567"
+
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        ("0501234567", "+380501234567"),
+        ("+380501234567", "+380501234567"),
+        ("380501234567", "+380501234567"),
+        ("050 123 45 67", "+380501234567"),
+        ("+38 (050) 123-45-67", "+380501234567"),
+        ("501234567", "+380501234567"),
+    ],
+)
+def test_phone_normalizes_to_e164(raw, expected):
+    assert Phone(raw).value == expected
+
+
+@pytest.mark.parametrize(
+    "raw, operator",
+    [
+        ("0501234567", "Vodafone"),
+        ("0671234567", "Kyivstar"),
+        ("0631234567", "lifecell"),
+        ("0911234567", "3Mob"),
+        ("0941234567", "Intertelecom"),
+    ],
+)
+def test_phone_resolves_known_operator(raw, operator):
+    phone = Phone(raw)
+
+    assert phone.operator == operator
+    assert phone.country.value == "UA"
+
+
+def test_phone_accepts_valid_shape_with_unknown_operator():
+    phone = Phone("0001234567")
+
+    assert phone.value == "+380001234567"
+    assert phone.operator is None
+    assert phone.country.value == "UA"
 
 
 @pytest.mark.parametrize(
     "raw",
-    ["", "123", "12345678901", "050123456a", "+380501234567", "050 123 4567"],
+    ["", "123", "12345678901", "050123456a", "+380 50 123 45 6", "abc"],
 )
 def test_phone_rejects_invalid_value(raw):
     with pytest.raises(ValueError):
         Phone(raw)
+
+
+def test_phone_uses_ai_fallback_only_when_unresolved():
+    from assistant_t800.domain.phone_validation import (
+        PhoneClassification,
+        PhoneCountry,
+    )
+
+    calls: list[str] = []
+
+    def ai(value: str):
+        calls.append(value)
+        return PhoneClassification(
+            national="0001234567",
+            e164="+380001234567",
+            country=PhoneCountry.UA,
+            operator="MysteryNet",
+            is_valid=True,
+            looks_like_phone=True,
+            source="ai",
+        )
+
+    resolved = Phone("0501234567", ai_fallback=ai)
+    assert resolved.operator == "Vodafone"
+    assert calls == []  # regex resolved it; AI never consulted
+
+    unresolved = Phone("0001234567", ai_fallback=ai)
+    assert unresolved.operator == "MysteryNet"
+    assert calls == ["0001234567"]
+
+
+def test_phone_migrates_legacy_national_value_on_unpickle():
+    import pickle
+
+    legacy = Phone.__new__(Phone)
+    legacy.__dict__["value"] = "0501234567"
+
+    restored = pickle.loads(pickle.dumps(legacy))
+
+    assert restored.value == "+380501234567"
+    assert restored.national == "0501234567"
+    assert restored.operator == "Vodafone"
+
+
+def test_phone_pickle_round_trip_is_stable():
+    import pickle
+
+    phone = Phone("0671234567")
+    restored = pickle.loads(pickle.dumps(phone))
+
+    assert restored.value == "+380671234567"
 
 
 def test_phone_is_valid_accepts_clean_value():
@@ -86,6 +178,10 @@ def test_phone_is_valid_accepts_clean_value():
 
 def test_phone_is_valid_accepts_padded_value():
     assert Phone.is_valid("  0501234567  ")
+
+
+def test_phone_is_valid_accepts_international_format():
+    assert Phone.is_valid("+380501234567")
 
 
 @pytest.mark.parametrize("raw", ["", "123", "12345678901", "abcdefghij"])
@@ -97,14 +193,21 @@ def test_phone_is_valid_rejects_non_string_value():
     assert not Phone.is_valid(1234567890)  # type: ignore[arg-type]
 
 
-@pytest.mark.parametrize("raw", ["0501234567", "1", "12345678901234"])
-def test_phone_looks_like_accepts_digits_only(raw):
+@pytest.mark.parametrize(
+    "raw",
+    ["0501234567", "+380501234567", "050-123-45-67", "(050) 123 45 67"],
+)
+def test_phone_looks_like_accepts_phone_shapes(raw):
     assert Phone.looks_like(raw)
 
 
-@pytest.mark.parametrize("raw", ["", "abc", "050-123-4567", "+380501234567"])
-def test_phone_looks_like_rejects_non_digit_value(raw):
+@pytest.mark.parametrize("raw", ["", "abc", "1", "12345"])
+def test_phone_looks_like_rejects_non_phone_value(raw):
     assert not Phone.looks_like(raw)
+
+
+def test_phone_looks_like_rejects_non_string_value():
+    assert not Phone.looks_like(1234567890)  # type: ignore[arg-type]
 
 
 # ---------- Email ----------
@@ -171,16 +274,88 @@ def test_email_looks_like_rejects_non_string_value():
 # ---------- Address ----------
 
 
-def test_address_strips_surrounding_whitespace():
-    address = Address("  Київ, Хрещатик 1  ")
+def test_address_builds_canonical_value_with_all_fields():
+    address = Address(
+        country="Ukraine",
+        city="Київ",
+        line="вул. Хрещатик 1",
+        zip_code="01001",
+        region="Київська обл.",
+    )
 
-    assert address.value == "Київ, Хрещатик 1"
+    assert address.country == "UA"
+    assert address.value == "UA, 01001, Київ, Київська обл., вул. Хрещатик 1"
 
 
-@pytest.mark.parametrize("raw", ["", "   ", "\t"])
-def test_address_rejects_empty_or_whitespace_value(raw):
+def test_address_omits_absent_optional_fields():
+    address = Address(country="UA", city="Львів", line="пл. Ринок 1")
+
+    assert address.value == "UA, Львів, пл. Ринок 1"
+    assert address.zip_code is None
+    assert address.region is None
+
+
+def test_address_resolves_country_aliases():
+    assert Address(country="україна", city="Київ", line="X").country == "UA"
+    assert Address(country="usa", city="NYC", line="5th Ave").country == "US"
+
+
+def test_address_as_dict_returns_components():
+    address = Address(country="UA", city="Київ", line="вул. X", zip_code="01001")
+
+    assert address.as_dict() == {
+        "country": "UA",
+        "zip_code": "01001",
+        "city": "Київ",
+        "region": None,
+        "line": "вул. X",
+    }
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"country": "Narnia", "city": "X", "line": "Y"},
+        {"country": "UA", "city": "", "line": "Y"},
+        {"country": "UA", "city": "X", "line": ""},
+        {"country": "", "city": "X", "line": "Y"},
+        {"country": "UA", "city": "X", "line": "Y", "zip_code": "abc"},
+    ],
+)
+def test_address_rejects_invalid_input(kwargs):
     with pytest.raises(ValueError):
-        Address(raw)
+        Address(**kwargs)
+
+
+def test_address_accepts_flexible_zip():
+    address = Address(country="UA", city="X", line="Y", zip_code="01-001")
+
+    assert address.zip_code == "01-001"
+
+
+def test_address_uses_country_ai_fallback_when_table_misses():
+    address = Address(
+        country="Atlantis",
+        city="X",
+        line="Y",
+        country_ai_fallback=lambda value: "AT",
+    )
+
+    assert address.country == "AT"
+
+
+def test_address_migrates_legacy_string_on_unpickle():
+    import pickle
+
+    legacy = Address.__new__(Address)
+    legacy.__dict__["value"] = "Київ, вул. Хрещатик 1"
+
+    restored = pickle.loads(pickle.dumps(legacy))
+
+    assert restored.country == "UA"
+    assert restored.city == "Київ"
+    assert restored.line == "вул. Хрещатик 1"
+    assert restored.as_dict()["country"] == "UA"
 
 
 # ---------- Birthday ----------
