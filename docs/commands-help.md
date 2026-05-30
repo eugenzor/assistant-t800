@@ -294,27 +294,23 @@ If the saved value is empty:
 
 ---
 
-### `edit-tags <name> [tags]`
+### `suggest-tags <name>`
 
-Directly replace all tags without opening the editor.
+Generate an AI-assisted tag set for a contact based on available profile data, including structured address information, birthday data, notes, and existing tags.
 
-```bash
-edit-tags "John Smith" "work; friends, usa"
-```
-
-Examples:
+The AI returns up to 7 tags that best represent the contact and can improve future search, categorization, and filtering operations.
 
 ```bash
-edit-tags John work
-edit-tags John work;urgent
-edit-tags John work;friends,usa
+suggest-tags "John Smith"
 ```
 
-Rules:
+Behavior:
 
-* existing tags are completely replaced;
-* duplicate tags are ignored by domain validation;
-* empty value removes all tags after confirmation.
+* Existing tags are used as context during AI analysis.
+* The generated tag set is presented in an editable tag editor before saving.
+* Users can review, modify, add, or remove tags before applying changes.
+* No changes are saved automatically.
+* `Esc` cancels editing and returns to the contact card without modifying contact data.
 
 ---
 
