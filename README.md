@@ -2,7 +2,8 @@
 
 Assistant T800 is a Python 3.13+ personal assistant for managing contacts from the terminal.
 
-The primary interface is a CLI with command history, completion, aliases, localized messages, Rich output, and optional AI-based command suggestions. The project also contains an optional Textual-based TUI / AI-chat layer, but the current main product is the CLI.
+The primary interface is a CLI with command history, completion, aliases, localized messages, Rich output, and optional
+AI-based command suggestions. The project also contains Textual-based TUI / AI-chat layer.
 
 ---
 
@@ -11,11 +12,11 @@ The primary interface is a CLI with command history, completion, aliases, locali
 ### Contact Management
 
 - Add contacts with:
-  - name;
-  - one or more phone numbers;
-  - one or more e-mail addresses;
-  - address;
-  - birthday.
+    - name;
+    - one or more phone numbers;
+    - one or more e-mail addresses;
+    - address;
+    - birthday.
 - Show all contacts.
 - Show one contact as a detailed card.
 - Search contacts by all fields or by a specific field.
@@ -36,9 +37,9 @@ edit-note <name>
 - The inline note editor is shown under the contact card.
 - Existing note text is prefilled.
 - Key bindings:
-  - `Enter` — new line;
-  - `Ctrl+S` — save;
-  - `Esc` / `Ctrl+C` — cancel.
+    - `Enter` — new line;
+    - `Ctrl+S` — save;
+    - `Esc` / `Ctrl+C` — cancel.
 - Direct note update is also supported:
 
 ```bash
@@ -76,7 +77,8 @@ suggest-tags <name>
 
 How it works:
 
-- The AI looks at the contact's name, country, city, note, birthday month and current tags, then suggests up to 5 short tags.
+- The AI looks at the contact's name, country, city, note, birthday month and current tags, then suggests up to 5 short
+  tags.
 - It writes tags in the same language as the contact's data (Ukrainian or English).
 - The suggested tags are joined with the existing ones and shown in the same editable line as `edit-tags`.
 - You can edit, add or remove tags, then `Enter` to save or `Esc` to cancel. Nothing is saved until you confirm.
@@ -87,7 +89,8 @@ Why it's useful:
 - You stay in control: you always see and edit the tags before they are saved.
 - Manual tagging still works the same; this is just a faster way to add tags.
 
-Needs a `GOOGLE_API_KEY` (see below). The command only works interactively; if `prompt_toolkit` is missing, use `edit-tags` instead.
+Needs a `GOOGLE_API_KEY` (see below). The command only works interactively; if `prompt_toolkit` is missing, use
+`edit-tags` instead.
 
 ### Search
 
@@ -102,7 +105,8 @@ Implemented commands:
 
 Search is case-insensitive and supports partial matches.
 
-No-match results are not treated as successful OK results. They return the corresponding warning/info status, for example `NAME_NOT_FOUND`, `QUERY_NOT_FOUND`, `PHONE_NOT_FOUND`, and similar.
+No-match results are not treated as successful OK results. They return the corresponding warning/info status, for
+example `NAME_NOT_FOUND`, `QUERY_NOT_FOUND`, `PHONE_NOT_FOUND`, and similar.
 
 ### CLI UX
 
@@ -175,9 +179,37 @@ can be resolved to:
 remove Аліса
 ```
 
-### Optional TUI
+### Textual TUI
 
 The Textual TUI is available as an additional AI-powered interface. It shares the same pickle storage file with the CLI.
+
+The TUI is a two-pane terminal application:
+
+- **Display pane** (left, 70%) — shows contact cards, tables, and birthday lists updated automatically by the AI.
+- **Chat pane** (right, 30%) — a conversation window where you type natural language requests and read the AI responses.
+
+#### Example requests
+
+```
+> Add John Smith: tel: 0999999999, email: john.smith@gmail.com, birth date 15/08/1980
+
+> Add him a note: Buy him a gift: sunglasses
+
+> Show me contacts that have birthday next week
+
+> Add new phone number to John Smith: 0911111111
+```
+
+Other things you can ask:
+
+```
+Show all contacts
+Find everyone tagged as "work"
+Remove Alice's address
+What's John's email?
+Set birthday for Maria to 03/12/1995
+Remove the note from Bob
+```
 
 ---
 
@@ -288,7 +320,7 @@ uv run assistant-t800 tui
 or:
 
 ```bash
-uv run assistant-t800 --enable-ai
+uv run python main.py tui
 ```
 
 ---
@@ -411,7 +443,8 @@ Use quotes for values containing spaces.
 3. Create an API key.
 4. Add it to `.env` as `GOOGLE_API_KEY`.
 
-If both `GOOGLE_API_KEY` and `GEMINI_API_KEY` are set, the Google provider may print a warning and use `GOOGLE_API_KEY`. Prefer keeping only `GOOGLE_API_KEY` in this project.
+If both `GOOGLE_API_KEY` and `GEMINI_API_KEY` are set, the Google provider may print a warning and use `GOOGLE_API_KEY`.
+Prefer keeping only `GOOGLE_API_KEY` in this project.
 
 ---
 
@@ -499,8 +532,8 @@ The current baseline includes:
 - structured application statuses;
 - safe pickle persistence with backup and recovery;
 - AI command suggestions;
-- AI phone validation fallback, 
-- AI address parsing/validation, 
+- AI phone validation fallback,
+- AI address parsing/validation,
 - AI tag suggestions.
 - optional TUI;
 - updated test suite.
