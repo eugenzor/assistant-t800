@@ -48,7 +48,9 @@ class Contact:
 
     @staticmethod
     def key_fields() -> tuple[str, ...]:
-        return ("name",)
+        return tuple(
+            "name",
+        )
 
     def add_phone(self, phone: str) -> None:
         """Add a validated unique phone number to the contact."""
