@@ -34,6 +34,11 @@ def _fail(message: str) -> ToolReturn[str]:
     return ToolReturn(return_value=message)
 
 
+def _normalize_phones(phones: list[str]) -> list[str]:
+    """Normalize raw phone inputs to stored digit form."""
+    return [normalize_phone(phone) for phone in phones]
+
+
 def _contacts_display(contacts: list) -> DisplayPayload:
     """Build a contacts display payload."""
     return DisplayPayload(kind="contacts", contacts=contacts)
@@ -354,7 +359,7 @@ def add_phones(
 ) -> ToolReturn[str]:
     """Add one or more phone numbers to an existing contact."""
     try:
-        ctx.deps.contacts_service.add_phones(name, phones)
+        ctx.deps.contacts_service.add_phones(name, _normalize_phones(phones))
     except (KeyError, ValueError) as exc:
         return _fail(f"Не вдалося додати телефони: {exc}")
 
@@ -485,7 +490,7 @@ def remove_phones(
 ) -> ToolReturn[str]:
     """Remove one or more phone numbers from an existing contact."""
     try:
-        ctx.deps.contacts_service.remove_phones(name, phones)
+        ctx.deps.contacts_service.remove_phones(name, _normalize_phones(phones))
     except (KeyError, ValueError) as exc:
         return _fail(f"Не вдалося видалити телефони: {exc}")
 
