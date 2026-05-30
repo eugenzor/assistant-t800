@@ -3,7 +3,7 @@
 from rich.console import Group
 
 from assistant_t800.interfaces.cli.metrics import DEFAULT_PAD, get_ascii_logo_width
-from assistant_t800.localization import APP_VERSION, ASCII_APP_LOGO, Message
+from assistant_t800.localization.messages import APP_VERSION, ASCII_APP_LOGO
 
 
 def build_welcome_header(*, text_cls, table_cls, width: int):
@@ -23,13 +23,13 @@ def build_welcome_header(*, text_cls, table_cls, width: int):
     title = Group(
         text_cls(),
         text_cls(
-            str(Message.WELCOME_TITLE),
+            "ASSISTANT T800",
             justify="center",
             style="bold green",
         ),
         text_cls(""),
         text_cls(
-            str(Message.WELCOME_SUBTITLE),
+            "Персональний CLI асистент\nдля контактів, нотаток та тегів",
             justify="center",
             style="white",
         ),

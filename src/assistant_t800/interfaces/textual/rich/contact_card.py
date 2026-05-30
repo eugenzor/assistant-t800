@@ -6,7 +6,6 @@ from typing import Final
 
 from assistant_t800.application.enums import SystemValue
 from assistant_t800.domain.contacts import Contact
-from assistant_t800.localization import Message
 
 EMPTY_VALUE: Final[str] = "--"
 LABEL_WIDTH: Final[int] = 18
@@ -28,12 +27,12 @@ def build_contact_panel(*, panel_cls, text_cls, contact: Contact, width: int):
 
     if _has_note(contact):
         _append_separator(content, width)
-        _append_section_title(content, "▣", str(Message.CONTACT_NOTE))
+        _append_section_title(content, "▣", "Нотатка")
         _append_wrapped_text(content, contact.note, width)
 
     if contact.tags:
         _append_separator(content, width)
-        _append_section_title(content, "◇", str(Message.CONTACT_TAGS))
+        _append_section_title(content, "◇", "Теги")
         _append_wrapped_text(content, "; ".join(sorted(contact.tags)), width)
 
     panel = panel_cls(
@@ -64,19 +63,19 @@ def _main_rows(contact: Contact) -> tuple[tuple[str, str], ...]:
     """Return main contact rows."""
     rows = (
         (
-            str(Message.CONTACT_PHONE),
+            "Телефон",
             _join_values(str(item) for item in contact.phones),
         ),
         (
-            str(Message.CONTACT_EMAIL),
+            "Email",
             _join_values(item.value for item in contact.emails),
         ),
         (
-            str(Message.CONTACT_ADDRESS),
+            "Адреса",
             contact.formatted_address if contact.address is not None else EMPTY_VALUE,
         ),
         (
-            str(Message.CONTACT_BIRTHDAY),
+            "День народження",
             str(contact.birthday) if contact.birthday is not None else EMPTY_VALUE,
         ),
     )

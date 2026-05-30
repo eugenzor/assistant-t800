@@ -1,7 +1,6 @@
 """LLM tool helpers: field filtering and JSON formatting for tool results."""
 
 import json
-from enum import StrEnum
 from typing import Any, Literal, TypeVar
 
 from assistant_t800.application.enums import SystemValue
@@ -10,23 +9,16 @@ from assistant_t800.domain.birthdays import BirthdaysListContact
 from assistant_t800.domain.contacts import Contact
 
 
-class ContactField(StrEnum):
-    """User-facing contact attribute names."""
+# User-facing contact attribute names, derived directly from the domain model.
+# Built as a runtime ``Literal`` so LLM tool schemas constrain the model to
+# valid field names without duplicating the field list in the AI layer.
+ContactFieldName = Literal[tuple(Contact.public_fields())]
 
-    NAME = "name"
-    PHONES = "phones"
-    EMAILS = "emails"
-    ADDRESS = "address"
-    BIRTHDAY = "birthday"
-    NOTE = "note"
-    TAGS = "tags"
-
-
-CONTACT_FIELD_NAMES: frozenset[str] = frozenset(field.value for field in ContactField)
+CONTACT_FIELD_NAMES: frozenset[str] = frozenset(Contact.public_fields())
 
 ItemT = TypeVar("ItemT")
 
-DEFAULT_READ_TOOL_FIELDS: tuple[ContactField, ...] = (ContactField.NAME,)
+DEFAULT_READ_TOOL_FIELDS: tuple[str, ...] = Contact.key_fields()
 
 
 def coalesce_read_fields(fields: list[str] | None) -> list[str]:
@@ -34,14 +26,12 @@ def coalesce_read_fields(fields: list[str] | None) -> list[str]:
     return list(DEFAULT_READ_TOOL_FIELDS if fields is None else fields)
 
 
-def resolve_contact_fields(fields: list[ContactField]) -> frozenset[str]:
+def resolve_contact_fields(fields: list[str]) -> frozenset[str]:
     """Normalize a field filter for LLM tool output.
 
-    ``name`` is always included for identification.
+    Key fields (``name``) are always included for identification.
     """
-    normalized = {field.value for field in fields}
-    normalized.add(ContactField.NAME.value)
-    return frozenset(normalized)
+    return frozenset({*fields, *Contact.key_fields()})
 
 
 def _cap_items(items: list[ItemT], max_items: int | None) -> tuple[list[ItemT], int]:

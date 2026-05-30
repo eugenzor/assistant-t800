@@ -5,12 +5,15 @@ from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
+from rich.console import RenderableType
+from rich.text import Text
 from textual.widgets import Footer, Header, Input, RichLog, Static
 from textual.worker import Worker, WorkerState
 
 from assistant_t800.ai.agent import run_chat
 from assistant_t800.ai.deps import AgentDeps
 from assistant_t800.interfaces.textual.presenter import TextualPresenter
+from assistant_t800.interfaces.textual.rich.markdown import markdown_to_text
 from assistant_t800.repositories.contacts import ContactsRepository
 from assistant_t800.services.contacts import ContactsService
 from assistant_t800.storage import AssistantStorage
@@ -122,7 +125,7 @@ class AssistantApp(App):
         self.call_after_refresh(self._presenter.welcome)
         self._input.focus()
 
-    def _add_message(self, markup: str) -> Static:
+    def _add_message(self, markup: RenderableType) -> Static:
         """Append a chat message and scroll the chat log to the bottom."""
         message = Static(markup, markup=True, classes="chat-message")
         self._chat_log.mount(message)
@@ -169,7 +172,7 @@ class AssistantApp(App):
             f"[bold green]Арні:[/bold green] [italic]{spinner} обробляю запит…[/italic]"
         )
 
-    def _finish_loader(self, markup: str) -> None:
+    def _finish_loader(self, markup: RenderableType) -> None:
         """Replace the loader placeholder with the final response."""
         if self._loader_timer is not None:
             self._loader_timer.stop()
@@ -206,7 +209,9 @@ class AssistantApp(App):
             if reply.startswith("[error]"):
                 self._finish_loader(f"[bold red]Арні:[/bold red] {reply}")
             else:
-                self._finish_loader(f"[bold green]Арні:[/bold green] {reply}")
+                message = Text.from_markup("[bold green]Арні:[/bold green] ")
+                message.append_text(markdown_to_text(reply))
+                self._finish_loader(message)
 
             self._busy = False
 

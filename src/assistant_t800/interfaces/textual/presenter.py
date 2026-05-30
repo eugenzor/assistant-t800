@@ -13,7 +13,6 @@ from assistant_t800.interfaces.textual.rich.birthdays import build_birthdays_tab
 from assistant_t800.interfaces.textual.rich.contact_card import build_contact_panel
 from assistant_t800.interfaces.textual.rich.contacts import build_contacts_table
 from assistant_t800.interfaces.textual.rich.header import build_welcome_header
-from assistant_t800.localization import Message
 
 
 class TextualPresenter:
@@ -57,7 +56,7 @@ class TextualPresenter:
         """Render the contact list into the display log."""
         self._log.clear()
         self._log.write(
-            Message.CONTACTS_LISTED.render(count=len(contacts)),
+            f"Знайдено контактів: {len(contacts)}",
             expand=False,
         )
         self._log.write(
