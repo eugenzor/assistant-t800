@@ -101,20 +101,20 @@ The following functionality was implemented beyond the original GoIT final proje
 
 # 3. Architectural Readiness
 
-| Status | Component                  | Implementation Status                                      |
-| ------ |----------------------------|-------------------------------------------------------- ----|
-| ✅ | Domain-First Validation    | Implemented                                                |
-| ✅ | Thin Handlers Architecture | Implemented                                                |
-| ✅ | Service Layer              | Implemented                                                |
-| ✅ | Repository Layer           | Implemented                                                |
-| ✅ | Storage Abstraction        | Implemented                                                |
-| ✅ | Prompting Abstraction      | Implemented                                                |
-| ✅ | Edit Resolvers             | Implemented                                                |
-| ✅ | Rich Rendering Modules     | Implemented                                                |
-| ✅ | Localization Layer         | Implemented                                                |
-| ✅ | Suggestions Subsystem      | Implemented                                                |
-| ✅ | TUI Evolution Path         | Architecture supports further UX and functionality expansion |
-| ✅ | Test Coverage              | Current checkpoint: **740 passed**                         |
+| Status | Component                  | Implementation Status                                        |
+|--------|----------------------------|--------------------------------------------------------------|
+| ✅      | Domain-First Validation    | Implemented                                                  |
+| ✅      | Thin Handlers Architecture | Implemented                                                  |
+| ✅      | Service Layer              | Implemented                                                  |
+| ✅      | Repository Layer           | Implemented                                                  |
+| ✅      | Storage Abstraction        | Implemented                                                  |
+| ✅      | Prompting Abstraction      | Implemented                                                  |
+| ✅      | Edit Resolvers             | Implemented                                                  |
+| ✅      | Rich Rendering Modules     | Implemented                                                  |
+| ✅      | Localization Layer         | Implemented                                                  |
+| ✅      | Suggestions Subsystem      | Implemented                                                  |
+| ✅      | TUI Evolution Path         | Architecture supports further UX and functionality expansion |
+| ✅      | Test Coverage              | Current checkpoint: **740 passed**                           |
 
 ---
 
