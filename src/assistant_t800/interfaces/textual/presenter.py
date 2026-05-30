@@ -1,5 +1,6 @@
 """Textual presenter implementation for the AI agent."""
 
+from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
@@ -107,6 +108,11 @@ class TextualPresenter:
         )
 
     def _render_text(self, text: str) -> None:
-        """Replace display panel content with arbitrary text."""
+        """Replace display panel content with Markdown-rendered text.
+
+        Rendering through ``rich.markdown.Markdown`` (rather than writing the
+        raw string) bypasses the log's markup parsing, so stray ``[`` in the
+        data cannot corrupt the output.
+        """
         self._log.clear()
-        self._log.write(text)
+        self._log.write(Markdown(text))

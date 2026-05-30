@@ -67,6 +67,27 @@ def _mutated_contact_display(service: ContactsService, name: str) -> DisplayPayl
     return _contact_display(contact)
 
 
+def print_text(ctx: RunContext[AgentDeps], text: str) -> ToolReturn[str]:
+    """Render free-form ``text`` in the UI panel for a custom layout.
+
+    Use this ONLY when the user explicitly asks for a layout the structured
+    tools cannot express (e.g. "as a phonebook", "group by tag", "as CSV").
+    Prefer the structured read tools (``list_contacts``, ``get_contact``,
+    ``search_*``) for ordinary views — they render the data directly and
+    cannot misreport it.
+
+    Format ``text`` as Markdown: use ``**bold**``, bullet lists, and Markdown
+    tables (``| a | b |``) for structure. Avoid ``#`` headings — they render
+    heavily in the narrow panel. Only render data fetched via a tool in this
+    same turn — never values recalled from memory — and copy every value
+    (phones, emails) verbatim.
+    """
+    return _ok(
+        "Користувацький вигляд виведено на панель.",
+        DisplayPayload(kind="text", text=text),
+    )
+
+
 def _contacts_llm_message(
     header: str,
     contacts: list[Contact],
