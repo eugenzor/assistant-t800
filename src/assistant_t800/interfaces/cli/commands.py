@@ -151,9 +151,7 @@ def build_registry() -> dict[str, Command]:
             name="set-address",
             handler=set_address,
             description=Message.SET_ADDRESS_DESCRIPTION,
-            parse_args=False,
-            usage="set-address <name> country=<...> city=<...> line=<...> "
-            "[zip=<...>] [region=<...>]",
+            args=("name", "address"),
             aliases=(
                 "додай адресу",
                 "іуе-фввкуіі",
@@ -321,16 +319,15 @@ def build_registry() -> dict[str, Command]:
             name="suggest-tags",
             handler=suggest_tags,
             description=Message.SUGGEST_TAGS_DESCRIPTION,
-            args=("name",),
+            usage="suggest-tags <name>",
+            parse_args=False,
             aliases=(
-                "ігппуіе-ефпі",
+                "suggest_tags",
                 "suggest tags",
-                "ігппуіе ефпі",
+                "ai-tags",
+                "ai tags",
                 "запропонуй теги",
-                "ai-tag",
-                "фш-ефп",
-                "ai tag",
-                "фш ефп",
+                "згенеруй теги",
             ),
         ),
     )

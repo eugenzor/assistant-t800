@@ -5,7 +5,6 @@ from assistant_t800.application.contacts_args import (
     ContactDraft,
 )
 from assistant_t800.application.results import AppResult
-from assistant_t800.domain.fields import AddressInput
 from assistant_t800.localization import ErrorCode
 
 
@@ -27,14 +26,13 @@ def test_contact_draft_stores_supplied_values():
         name="Іван",
         phones=("1234567890",),
         emails=("a@example.com",),
-        address=AddressInput(country="UA", city="Kyiv", line="вул. X"),
+        address="Kyiv",
         birthday="01.01.1990",
     )
 
     assert draft.phones == ("1234567890",)
     assert draft.emails == ("a@example.com",)
-    assert draft.address is not None
-    assert draft.address.city == "Kyiv"
+    assert draft.address == "Kyiv"
     assert draft.birthday == "01.01.1990"
 
 
@@ -231,11 +229,10 @@ def test_parse_add_rejects_second_birthday_token():
 
 
 def test_parse_add_uses_non_typed_token_as_address():
-    result = ContactArgumentsParser.parse_add(("Іван", "Kyiv center"))
+    result = ContactArgumentsParser.parse_add(("Іван", "Kyiv"))
 
     assert isinstance(result, ContactDraft)
-    assert result.address is not None
-    assert result.address.city == "Kyiv center"
+    assert result.address == "Kyiv"
     assert result.phones == ()
     assert result.emails == ()
     assert result.birthday is None
@@ -243,7 +240,7 @@ def test_parse_add_uses_non_typed_token_as_address():
 
 def test_parse_add_uses_second_unknown_token_as_extra_arguments():
     result = ContactArgumentsParser.parse_add(
-        ("Іван", "Kyiv center", "Lviv center"),
+        ("Іван", "Kyiv", "Lviv"),
     )
 
     assert isinstance(result, AppResult)
@@ -261,7 +258,7 @@ def test_parse_add_combines_phone_email_address_and_birthday():
             "Іван",
             "1234567890",
             "ivan@example.com",
-            "Kyiv center",
+            "Kyiv",
             "01.01.1990",
         ),
     )
@@ -270,8 +267,7 @@ def test_parse_add_combines_phone_email_address_and_birthday():
     assert result.name == "Іван"
     assert result.phones == ("1234567890",)
     assert result.emails == ("ivan@example.com",)
-    assert result.address is not None
-    assert result.address.city == "Kyiv center"
+    assert result.address == "Kyiv"
     assert result.birthday == "01.01.1990"
 
 
@@ -280,7 +276,7 @@ def test_parse_add_supports_arbitrary_token_order():
         (
             "Іван",
             "01.01.1990",
-            "Kyiv center",
+            "Kyiv",
             "ivan@example.com",
             "1234567890",
         ),
@@ -289,8 +285,7 @@ def test_parse_add_supports_arbitrary_token_order():
     assert isinstance(result, ContactDraft)
     assert result.phones == ("1234567890",)
     assert result.emails == ("ivan@example.com",)
-    assert result.address is not None
-    assert result.address.city == "Kyiv center"
+    assert result.address == "Kyiv"
     assert result.birthday == "01.01.1990"
 
 
@@ -428,7 +423,7 @@ def test_parse_named_value_missing_value_returns_missing_arguments():
 
 def test_parse_named_value_too_many_arguments_returns_extra_arguments():
     result = ContactArgumentsParser.parse_named_value(
-        ("Іван", "Kyiv center", "Lviv center"),
+        ("Іван", "Kyiv", "Lviv"),
         command="set-address",
         value_name="address",
     )

@@ -6,8 +6,8 @@ from assistant_t800.application.dispatcher import CommandDispatcher
 from assistant_t800.application.results import AppResult
 from assistant_t800.interfaces.cli.edit_resolvers import (
     NoteEditResolver,
-    TagEditResolver,
     SuggestTagsResolver,
+    TagEditResolver,
 )
 from assistant_t800.interfaces.cli.prompting import (
     InputFunc,
@@ -133,14 +133,16 @@ class CliRunner:
         note_input = self._note_edit_resolver.resolve(raw_input)
 
         if isinstance(note_input, AppResult):
-            return note_input
+            result = note_input
+        else:
+            tag_input = self._tag_edit_resolver.resolve(note_input)
 
-        tag_input = self._tag_edit_resolver.resolve(note_input)
+            if isinstance(tag_input, AppResult):
+                result = tag_input
+            else:
+                result = self._suggest_tags_resolver.resolve(tag_input)
 
-        if isinstance(tag_input, AppResult):
-            return tag_input
-
-        return self._suggest_tags_resolver.resolve(tag_input)
+        return result
 
     def _confirm_and_dispatch(self, command_input: str, result: AppResult) -> AppResult:
         """Ask for confirmation and execute the resolved command when accepted."""

@@ -92,6 +92,9 @@
 | ✅      | Recovery workflow       | Реалізовано                         |
 | ✅      | Startup recovery prompt | Реалізовано                         |
 | ✅      | AI command suggestions  | Реалізовано                         |
+| ✅      | Extended Phone Validation + AI fallback   | Підтримка міжнародних форматів, AI як допоміжний шар        |
+| ✅      | Extended Address Validation + AI fallback | Нормалізація та структуризація адрес                        |
+| ✅      | AI Tag Suggestions                        | Аналіз контакту, адреси, нотаток, тегів та схожих контактів |
 | ✅      | TUI support             | Реалізовано як додатковий інтерфейс |
 
 ---
@@ -118,9 +121,6 @@
 
 | Статус | Feature                                   | Notes                                                       |
 | ------ | ----------------------------------------- | ----------------------------------------------------------- |
-| ❌      | Extended Phone Validation + AI fallback   | Підтримка міжнародних форматів, AI як допоміжний шар        |
-| ❌      | Extended Address Validation + AI fallback | Нормалізація та структуризація адрес                        |
-| ❌      | AI Tag Suggestions                        | Аналіз контакту, адреси, нотаток, тегів та схожих контактів |
 | 🟡     | Tag grouping / sorting                    | Архітектурно підтримується                                  |
 | 🟡     | SQLite storage adapter                    | Repository layer вже підготовлений                          |
 | 🟡     | Export / Import                           | Може бути додано поверх service/storage layer               |

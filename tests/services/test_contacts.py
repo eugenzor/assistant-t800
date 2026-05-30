@@ -3,7 +3,6 @@
 import pytest
 
 from assistant_t800.domain.contacts import Contact
-from assistant_t800.domain.fields import AddressInput
 from assistant_t800.repositories.contacts import ContactsRepository
 from assistant_t800.services.contacts import ContactsService
 
@@ -34,25 +33,25 @@ def test_add_contact_stores_contact_in_repository(service):
 
 
 def test_add_contact_with_single_phone(service):
-    contact = service.add_contact("Іван", phone="0501234567")
+    contact = service.add_contact("Іван", phone="1234567890")
 
-    assert [item.value for item in contact.phones] == ["+380501234567"]
+    assert [item.value for item in contact.phones] == ["1234567890"]
 
 
 def test_add_contact_with_phones_sequence(service):
-    contact = service.add_contact("Іван", phones=("0501234567", "0509998877"))
+    contact = service.add_contact("Іван", phones=("1234567890", "9876543210"))
 
-    assert [item.value for item in contact.phones] == ["+380501234567", "+380509998877"]
+    assert [item.value for item in contact.phones] == ["1234567890", "9876543210"]
 
 
 def test_add_contact_combines_phone_and_phones_with_single_first(service):
     contact = service.add_contact(
         "Іван",
-        phone="0501234567",
-        phones=("0509998877",),
+        phone="1234567890",
+        phones=("9876543210",),
     )
 
-    assert [item.value for item in contact.phones] == ["+380501234567", "+380509998877"]
+    assert [item.value for item in contact.phones] == ["1234567890", "9876543210"]
 
 
 def test_add_contact_with_single_email(service):
@@ -75,13 +74,10 @@ def test_add_contact_combines_email_and_emails(service):
 
 
 def test_add_contact_with_address(service):
-    contact = service.add_contact(
-        "Іван",
-        address=AddressInput(country="UA", city="Kyiv", line="вул. Хрещатик 1"),
-    )
+    contact = service.add_contact("Іван", address="Kyiv")
 
     assert contact.address is not None
-    assert contact.address.value == "UA, Kyiv, вул. Хрещатик 1"
+    assert contact.address.value == "Kyiv"
 
 
 def test_add_contact_with_birthday(service):
@@ -92,7 +88,7 @@ def test_add_contact_with_birthday(service):
 
 
 def test_add_contact_with_empty_address_does_not_set_address(service):
-    contact = service.add_contact("Іван", address=None)
+    contact = service.add_contact("Іван", address="")
 
     assert contact.address is None
 
@@ -179,16 +175,16 @@ def test_search_contacts_matches_by_name(service):
 
 
 def test_search_contacts_by_name_only_matches_name(service):
-    service.add_contact("Олена", phone="0501234567")
+    service.add_contact("Олена", phone="1234567890")
 
     assert service.search_contacts_by_name("12345") == []
 
 
 def test_search_contacts_by_phone(service):
-    service.add_contact("Іван", phone="0501234567")
-    service.add_contact("Олена", phone="0509998877")
+    service.add_contact("Іван", phone="1234567890")
+    service.add_contact("Олена", phone="9876543210")
 
-    result = service.search_contacts_by_phone("9998")
+    result = service.search_contacts_by_phone("9876")
 
     assert [item.name.value for item in result] == ["Олена"]
 
@@ -231,33 +227,23 @@ def test_search_upcoming_birthdays_delegates_to_repository(service):
 def test_set_address_assigns_address(service):
     service.add_contact("Іван")
 
-    contact = service.set_address(
-        "Іван", AddressInput(country="UA", city="Kyiv", line="вул. X")
-    )
+    contact = service.set_address("Іван", "Kyiv")
 
     assert contact.address is not None
-    assert contact.address.value == "UA, Kyiv, вул. X"
+    assert contact.address.value == "Kyiv"
 
 
 def test_set_address_overrides_existing_address(service):
-    service.add_contact(
-        "Іван",
-        address=AddressInput(country="UA", city="Kyiv", line="вул. X"),
-    )
+    service.add_contact("Іван", address="Kyiv")
 
-    contact = service.set_address(
-        "Іван", AddressInput(country="UA", city="Lviv", line="пл. Y")
-    )
+    contact = service.set_address("Іван", "Lviv")
 
-    assert contact.address.value == "UA, Lviv, пл. Y"
+    assert contact.address.value == "Lviv"
 
 
 def test_set_address_raises_when_contact_missing(service):
     with pytest.raises(KeyError):
-        service.set_address(
-            "Невідомий",
-            AddressInput(country="UA", city="Kyiv", line="вул. X"),
-        )
+        service.set_address("Невідомий", "Kyiv")
 
 
 # ---------- set_birthday ----------
@@ -282,29 +268,29 @@ def test_set_birthday_raises_on_invalid_format(service):
 
 
 def test_add_phones_appends_to_existing(service):
-    service.add_contact("Іван", phone="0501234567")
+    service.add_contact("Іван", phone="1234567890")
 
-    contact = service.add_phones("Іван", ("0509998877",))
+    contact = service.add_phones("Іван", ("9876543210",))
 
     assert [item.value for item in contact.phones] == [
-        "+380501234567",
-        "+380509998877",
+        "1234567890",
+        "9876543210",
     ]
 
 
 def test_add_phones_with_empty_sequence_keeps_existing_phones(service):
-    service.add_contact("Іван", phone="0501234567")
+    service.add_contact("Іван", phone="1234567890")
 
     contact = service.add_phones("Іван", ())
 
-    assert [item.value for item in contact.phones] == ["+380501234567"]
+    assert [item.value for item in contact.phones] == ["1234567890"]
 
 
 def test_add_phones_raises_on_duplicate(service):
-    service.add_contact("Іван", phone="0501234567")
+    service.add_contact("Іван", phone="1234567890")
 
     with pytest.raises(ValueError):
-        service.add_phones("Іван", ("0501234567",))
+        service.add_phones("Іван", ("1234567890",))
 
 
 def test_add_emails_appends_to_existing(service):
@@ -368,10 +354,7 @@ def test_remove_contact_raises_for_missing(service):
 
 
 def test_remove_address_clears_address(service):
-    service.add_contact(
-        "Іван",
-        address=AddressInput(country="UA", city="Kyiv", line="вул. X"),
-    )
+    service.add_contact("Іван", address="Kyiv")
 
     contact = service.remove_address("Іван")
 
@@ -390,22 +373,22 @@ def test_remove_birthday_clears_birthday(service):
 
 
 def test_remove_phones_removes_specified_phones(service):
-    service.add_contact("Іван", phones=("0501234567", "0509998877"))
+    service.add_contact("Іван", phones=("1234567890", "9876543210"))
 
-    contact = service.remove_phones("Іван", ("0501234567",))
+    contact = service.remove_phones("Іван", ("1234567890",))
 
-    assert [item.value for item in contact.phones] == ["+380509998877"]
+    assert [item.value for item in contact.phones] == ["9876543210"]
 
 
 def test_remove_phones_raises_for_unknown_phone(service):
-    service.add_contact("Іван", phone="0501234567")
+    service.add_contact("Іван", phone="1234567890")
 
     with pytest.raises(ValueError):
         service.remove_phones("Іван", ("0000000000",))
 
 
 def test_remove_all_phones_clears_phones(service):
-    service.add_contact("Іван", phones=("0501234567", "0509998877"))
+    service.add_contact("Іван", phones=("1234567890", "9876543210"))
 
     contact = service.remove_all_phones("Іван")
 
@@ -531,3 +514,21 @@ def test_set_tags_from_text_raises_for_missing_contact(service):
 def test_clear_tags_raises_for_missing_contact(service):
     with pytest.raises(KeyError):
         service.clear_tags("Unknown")
+
+
+def test_set_address_stores_parsed_address(service):
+    from assistant_t800.domain.addresses import ParsedAddress
+
+    service.add_contact("John Smith")
+    parsed = ParsedAddress(
+        country="Україна",
+        city="м. Київ",
+        address_line="вул. Хрещатик, 1",
+    )
+
+    contact = service.set_address("John Smith", "Khreshchatyk 1", parsed)
+
+    assert contact.address is not None
+    assert contact.address.value == "Khreshchatyk 1"
+    assert contact.parsed_address == parsed
+    assert contact.formatted_address == "Україна, м. Київ, вул. Хрещатик, 1"

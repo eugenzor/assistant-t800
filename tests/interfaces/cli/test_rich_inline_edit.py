@@ -4,11 +4,11 @@ from dataclasses import dataclass, field
 
 from assistant_t800.domain.contacts import Contact
 from assistant_t800.domain.fields import Name
-from assistant_t800.interfaces.rich.inline_edit import (
+from assistant_t800.interfaces.cli.rich.inline_edit import (
     request_note_edit,
     request_tag_edit,
 )
-from assistant_t800.interfaces.rich.inline_hint import display_inline_hint
+from assistant_t800.interfaces.cli.rich.inline_hint import display_inline_hint
 
 
 @dataclass

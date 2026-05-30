@@ -18,7 +18,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    assistant_t800_model: str = "google-gla:gemini-3.1-flash-lite"
+    assistant_t800_model: str = "google:gemini-3.1-flash-lite"
     max_history_messages: int = 10
     max_contacts_in_tool_return: int = 25
 

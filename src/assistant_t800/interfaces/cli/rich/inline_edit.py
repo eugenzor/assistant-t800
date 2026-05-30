@@ -3,8 +3,8 @@
 from typing import TYPE_CHECKING
 
 from assistant_t800.domain.contacts import Contact
-from assistant_t800.interfaces.rich.contact_card import display_contact_card
-from assistant_t800.interfaces.rich.inline_hint import display_inline_hint
+from assistant_t800.interfaces.cli.rich.contact_card import display_contact_card
+from assistant_t800.interfaces.cli.rich.inline_hint import display_inline_hint
 from assistant_t800.localization import Message
 
 if TYPE_CHECKING:

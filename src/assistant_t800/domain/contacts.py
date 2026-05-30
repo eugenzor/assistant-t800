@@ -4,40 +4,38 @@ The module defines the ``Contact`` entity and delegates field validation
 to dedicated domain field types.
 """
 
-from enum import StrEnum
 from typing import Optional
 
 from assistant_t800.application.enums import SystemValue
+from assistant_t800.domain.addresses import ParsedAddress
 from assistant_t800.domain.fields import Address, Birthday, Email, Name, Phone
-
-
-class ContactField(StrEnum):
-    """User-facing contact attribute names."""
-
-    NAME = "name"
-    PHONES = "phones"
-    EMAILS = "emails"
-    ADDRESS = "address"
-    BIRTHDAY = "birthday"
-    NOTE = "note"
-    TAGS = "tags"
-
-
-CONTACT_FIELD_NAMES: frozenset[str] = frozenset(field.value for field in ContactField)
 
 
 class Contact:
     """Contact aggregate with validated personal data fields."""
 
+    name: Name
+    phones: list[Phone]
+    emails: list[Email]
+    address: Address | None
+    parsed_address: ParsedAddress | None
+    birthday: Birthday | None
+    note: str
+    tags: set[str]
+
     def __init__(self, name: Name) -> None:
-        """Initialize a contact with required name and empty optional fields."""
-        self.name: Name = name
-        self.phones: list[Phone] = []
-        self.emails: list[Email] = []
-        self.address: Optional[Address] = None
-        self.birthday: Optional[Birthday] = None
-        self.note: str = SystemValue.EMPTY_TEXT.value
-        self.tags: set[str] = set()
+        self.name = name
+        self.phones = []
+        self.emails = []
+        self.address = None
+        self.parsed_address = None
+        self.birthday = None
+        self.note = SystemValue.EMPTY_TEXT.value
+        self.tags = set()
+
+    @classmethod
+    def public_fields(cls) -> list[str]:
+        return list(field for field in cls.__annotations__ if not field.startswith("_"))
 
     def add_phone(self, phone: str) -> None:
         """Add a validated unique phone number to the contact."""
@@ -87,26 +85,53 @@ class Contact:
 
         return result
 
+    @property
+    def formatted_address(self) -> str:
+        """Return normalized address when structured address is complete, else raw."""
+        result = ""
+
+        if self.address is not None:
+            result = self.address.value
+
+            if self.parsed_address is not None and self.parsed_address.is_complete:
+                parts = [
+                    self.parsed_address.country,
+                    self._region_city_display(),
+                    self.parsed_address.address_line,
+                    self.parsed_address.postal_code,
+                ]
+                result = ", ".join(part for part in parts if part)
+
+        return result
+
+    def _region_city_display(self) -> str | None:
+        """Return region and city display without duplicate values."""
+        result = None
+
+        if self.parsed_address is not None:
+            region = self.parsed_address.region
+            city = self.parsed_address.city
+
+            if region and city and region.casefold() != city.casefold():
+                result = f"{region}, {city}"
+            else:
+                result = city or region
+
+        return result
+
     def set_address(
         self,
-        country: str,
-        city: str,
-        line: str,
-        zip_code: Optional[str] = None,
-        region: Optional[str] = None,
+        address: str,
+        parsed_address: ParsedAddress | None = None,
     ) -> None:
-        """Set or replace the contact address from structured components."""
-        self.address = Address(
-            country=country,
-            city=city,
-            line=line,
-            zip_code=zip_code,
-            region=region,
-        )
+        """Set or replace the contact address."""
+        self.address = Address(address)
+        self.parsed_address = parsed_address
 
     def remove_address(self) -> None:
         """Remove the contact address."""
         self.address = None
+        self.parsed_address = None
 
     def set_birthday(self, birthday: str) -> None:
         """Set or replace the contact birthday."""
@@ -153,18 +178,18 @@ class Contact:
 
     def __str__(self) -> str:
         """Return a compact user-facing contact representation."""
-        parts = [f"Ім'я контакту: {self.name.value}"]
+        parts = [f"Name: {self.name.value}"]
 
         if self.phones:
-            parts.append("телефони: " + "; ".join(item.value for item in self.phones))
+            parts.append("Phone: " + "; ".join(str(item) for item in self.phones))
 
         if self.emails:
-            parts.append("e-mail: " + "; ".join(item.value for item in self.emails))
+            parts.append("Email: " + "; ".join(item.value for item in self.emails))
 
         if self.address is not None:
-            parts.append(f"адреса: {self.address.value}")
+            parts.append(f"Address: {self.formatted_address}")
 
         if self.birthday is not None:
-            parts.append(f"день народження: {self.birthday}")
+            parts.append(f"Birthday: {self.birthday}")
 
         return ", ".join(parts)

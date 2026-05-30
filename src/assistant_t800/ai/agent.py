@@ -4,12 +4,10 @@ Builds a ``pydantic_ai``-based agent. Tool functions are defined in
 :mod:`assistant_t800.ai.tools`.
 """
 
-import json
 import os
 from functools import lru_cache
 
 from pydantic_ai import Agent
-from pydantic import BaseModel
 
 from assistant_t800.ai.deps import AgentDeps
 from assistant_t800.ai.display import apply_display, extract_display_payloads
@@ -44,7 +42,7 @@ from assistant_t800.ai.tools import (
 )
 
 # Default AI model name. Can be overridden via environment variable.
-DEFAULT_MODEL = "google-gla:gemini-3.1-flash-lite"
+DEFAULT_MODEL = "google:gemini-3.1-flash-lite"
 
 # System prompt that defines the assistant role and behavior.
 SYSTEM_PROMPT = """\
@@ -92,19 +90,6 @@ SYSTEM_PROMPT = """\
 4. Перед додаванням або редагуванням перевіряй формат телефону та дати народження.
 5. Якщо номер телефону або дату народження не вдається розпізнати повідом користувача 
 про помилку і попроси виправити дані.
-6. На питання про збережені контакти завжди викликай інструмент читання (`list_contacts`,
-`search_*`, `get_contact`, `search_upcoming_birthdays`) і відповідай лише на основі
-повернутих даних — не вигадуй.
-7. Для аналітичних або фільтруючих запитів (сезон дня народження, відсутні поля,
-комбінації критеріїв) викликай найширший відповідний інструмент читання (зазвичай
-`list_contacts`), потім застосуй критерії користувача до повернутих даних.
-8. Якщо результат інструмента обрізано, повідом про це і запропонуй уточнити запит
-або скористатися пошуком за конкретним полем.
-9. Інструменти читання приймають параметр ``fields`` (за замовчуванням лише
-``name``) — додай потрібні поля (наприклад, ``fields=["birthday"]`` для сезонних
-запитів або ``fields=["emails"]`` для пошуку контактів без e-mail).
-10. Якщо запит потребує кількох атрибутів, передай у ``fields`` усі потрібні
-``ContactField`` значення.
 
 Приклади стилю відповідей:
 - “Команду прийнято. Контакт додано.”
@@ -226,34 +211,3 @@ _TAG_SUGGESTION_PROMPT = """\
 Вхід: {"name": "Боб"}
 Вихід: {"tags": []}
 """
-
-
-class _TagSuggestion(BaseModel):
-    """Structured output schema for tag suggestions."""
-
-    tags: list[str]
-
-
-@lru_cache(maxsize=1)
-def _get_tag_suggest_agent() -> Agent[None, _TagSuggestion]:
-    """Create and return a configured singleton AI agent for tag suggestions."""
-    model = os.environ.get("ASSISTANT_T800_MODEL", DEFAULT_MODEL)
-    return Agent(
-        model, output_type=_TagSuggestion, system_prompt=_TAG_SUGGESTION_PROMPT
-    )
-
-
-def suggest_tags(snapshot: dict) -> list[str]:
-    """Call the LLM with a contact snapshot and return raw suggested tags.
-
-    Args:
-        snapshot: Contact snapshot dict produced by
-            :func:`assistant_t800.services.contacts.build_tag_suggestion_snapshot`.
-
-    Returns:
-        Raw tag list from the model. Normalization, dedup, and the
-        ``<=5`` cap are the caller's responsibility.
-    """
-    payload = json.dumps(snapshot, ensure_ascii=False)
-    result = _get_tag_suggest_agent().run_sync(payload)
-    return result.output.tags

@@ -499,10 +499,10 @@ The current baseline includes:
 - structured application statuses;
 - safe pickle persistence with backup and recovery;
 - AI command suggestions;
-- optional TUI;
-- updated test suite.
-
-The next planned area is AI-assisted data enrichment: 
 - AI phone validation fallback, 
 - AI address parsing/validation, 
 - AI tag suggestions.
+- optional TUI;
+- updated test suite.
+
+

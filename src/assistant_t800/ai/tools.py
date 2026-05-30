@@ -5,6 +5,7 @@ Each tool receives ``RunContext[AgentDeps]`` and returns a
 Tools map 1:1 to methods on :class:`assistant_t800.services.contacts.ContactsService`.
 """
 
+from enum import StrEnum
 from typing import Optional
 
 from pydantic_ai import RunContext
@@ -18,9 +19,26 @@ from assistant_t800.ai.utils import (
     resolve_contact_fields,
 )
 from assistant_t800.ai.results import DisplayPayload
-from assistant_t800.domain.contacts import Contact, ContactField
-from assistant_t800.domain.fields import AddressInput
+from assistant_t800.application.normalizers import normalize_address, normalize_phone
+from assistant_t800.domain.contacts import Contact
 from assistant_t800.services.contacts import ContactsService
+
+
+class ContactField(StrEnum):
+    """User-facing contact attribute names."""
+
+    NAME = "name"
+    PHONES = "phones"
+    EMAILS = "emails"
+    ADDRESS = "address"
+    BIRTHDAY = "birthday"
+    NOTE = "note"
+    TAGS = "tags"
+
+
+CONTACT_FIELD_NAMES: frozenset[str] = frozenset(field.value for field in ContactField)
+
+DEFAULT_READ_TOOL_FIELDS: tuple[ContactField, ...] = (ContactField.NAME,)
 
 
 def _ok(message: str, display: DisplayPayload | None = None) -> ToolReturn[str]:
@@ -68,7 +86,7 @@ def _contacts_read_result(
     *,
     header: str,
     empty_message: str,
-    fields: list[ContactField] | None = None,
+    fields: list[str] | None = None,
 ) -> ToolReturn[str]:
     """Build a read-tool return with LLM JSON and UI display metadata."""
     if not matches:
@@ -86,42 +104,19 @@ def add_contact(
     name: str,
     phone: Optional[str] = None,
     email: Optional[str] = None,
-    address_country: Optional[str] = None,
-    address_city: Optional[str] = None,
-    address_line: Optional[str] = None,
-    address_zip: Optional[str] = None,
-    address_region: Optional[str] = None,
+    address: Optional[str] = None,
     birthday: Optional[str] = None,
 ) -> ToolReturn[str]:
-    """Create a new contact and refresh the UI contact list.
-
-    Address (if provided) is structured: ``address_country``, ``address_city``
-    and ``address_line`` are all required together; ``address_zip`` and
-    ``address_region`` are optional. Omit all address fields to skip address.
-    """
-    address: Optional[AddressInput] = None
-
-    if any((address_country, address_city, address_line)):
-        if not (address_country and address_city and address_line):
-            return _fail(
-                "Для адреси потрібні всі поля: address_country, address_city, "
-                "address_line"
-            )
-
-        address = AddressInput(
-            country=address_country,
-            city=address_city,
-            line=address_line,
-            zip_code=address_zip,
-            region=address_region,
-        )
-
+    """Create a new contact and refresh the UI contact list."""
     try:
+        parsed_address = normalize_address(address) if address else None
+        normalized_phone = normalize_phone(phone) if phone else None
         contact = ctx.deps.contacts_service.add_contact(
             name,
-            phone=phone,
+            phone=normalized_phone,
             email=email,
             address=address,
+            parsed_address=parsed_address,
             birthday=birthday,
         )
     except ValueError as exc:
@@ -317,31 +312,15 @@ def search_upcoming_birthdays(
     return _ok(message, DisplayPayload(kind="birthdays", birthdays=upcoming))
 
 
-def set_address(
-    ctx: RunContext[AgentDeps],
-    name: str,
-    country: str,
-    city: str,
-    line: str,
-    zip_code: Optional[str] = None,
-    region: Optional[str] = None,
-) -> ToolReturn[str]:
+def set_address(ctx: RunContext[AgentDeps], name: str, address: str) -> ToolReturn[str]:
     """Set or update an existing contact address.
 
     Address is a structured record. Required fields: ``country``, ``city`` and
     ``line`` (street address). ``zip_code`` and ``region`` are optional.
     """
     try:
-        ctx.deps.contacts_service.set_address(
-            name,
-            AddressInput(
-                country=country,
-                city=city,
-                line=line,
-                zip_code=zip_code,
-                region=region,
-            ),
-        )
+        parsed_address = normalize_address(address)
+        ctx.deps.contacts_service.set_address(name, address, parsed_address)
     except (KeyError, ValueError) as exc:
         return _fail(f"Не вдалося встановити адресу: {exc}")
 

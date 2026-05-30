@@ -1,19 +1,35 @@
 """LLM tool helpers: field filtering and JSON formatting for tool results."""
 
 import json
+from enum import StrEnum
 from typing import Any, Literal, TypeVar
 
 from assistant_t800.application.enums import SystemValue
 from assistant_t800.config import settings
 from assistant_t800.domain.birthdays import BirthdaysListContact
-from assistant_t800.domain.contacts import CONTACT_FIELD_NAMES, Contact, ContactField
+from assistant_t800.domain.contacts import Contact
+
+
+class ContactField(StrEnum):
+    """User-facing contact attribute names."""
+
+    NAME = "name"
+    PHONES = "phones"
+    EMAILS = "emails"
+    ADDRESS = "address"
+    BIRTHDAY = "birthday"
+    NOTE = "note"
+    TAGS = "tags"
+
+
+CONTACT_FIELD_NAMES: frozenset[str] = frozenset(field.value for field in ContactField)
 
 ItemT = TypeVar("ItemT")
 
 DEFAULT_READ_TOOL_FIELDS: tuple[ContactField, ...] = (ContactField.NAME,)
 
 
-def coalesce_read_fields(fields: list[ContactField] | None) -> list[ContactField]:
+def coalesce_read_fields(fields: list[str] | None) -> list[str]:
     """Return effective read-tool fields, applying the default when omitted."""
     return list(DEFAULT_READ_TOOL_FIELDS if fields is None else fields)
 
