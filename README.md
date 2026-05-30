@@ -183,7 +183,7 @@ remove Аліса
 
 The Textual TUI is available as an additional AI-powered interface. It shares the same pickle storage file with the CLI.
 
-The TUI is a two-pane terminal application:
+The TUI is a two-pane terminal application that build with the Textual framework:
 
 - **Display pane** (left, 70%) — shows contact cards, tables, and birthday lists updated automatically by the AI.
 - **Chat pane** (right, 30%) — a conversation window where you type natural language requests and read the AI responses.
@@ -520,22 +520,22 @@ Current checkpoint test result:
 
 The current baseline includes:
 
-- working CLI;
-- command aliases;
-- command history and clean completion;
-- contact management;
-- note management;
-- inline tag management;
-- search;
-- birthdays;
-- Rich UI rendering;
-- structured application statuses;
-- safe pickle persistence with backup and recovery;
-- AI command suggestions;
-- AI phone validation fallback,
-- AI address parsing/validation,
-- AI tag suggestions.
-- optional TUI;
-- updated test suite.
+- working CLI
+- command aliases
+- command history and clean completion
+- contact management
+- note management
+- inline tag management
+- search
+- birthdays
+- Rich UI rendering
+- structured application statuses
+- safe pickle persistence with backup and recovery
+- AI command suggestions
+- AI phone validation fallback
+- AI address parsing/validation
+- AI tag suggestions
+- a TUI built with the Textual framework
+- updated test suite
 
 
