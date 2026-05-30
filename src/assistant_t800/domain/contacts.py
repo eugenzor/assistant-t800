@@ -34,8 +34,16 @@ class Contact:
         self.tags = set()
 
     @classmethod
-    def public_fields(cls) -> list[str]:
-        return list(field for field in cls.__annotations__ if not field.startswith("_"))
+    def public_fields(cls) -> tuple[str, ...]:
+        return tuple(
+            name
+            for name in cls.__annotations__
+            if not name.startswith("_")
+        )
+
+    @staticmethod
+    def key_fields() -> tuple[str, ...]:
+        return tuple("name",)
 
     def add_phone(self, phone: str) -> None:
         """Add a validated unique phone number to the contact."""
