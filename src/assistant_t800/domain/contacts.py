@@ -35,10 +35,15 @@ class Contact:
 
     @classmethod
     def public_fields(cls) -> tuple[str, ...]:
+        """Return user-facing field names exposed to the UI and LLM tools.
+
+        Excludes private (underscore-prefixed) attributes and internal derived
+        fields such as ``parsed_address`` (a structured companion to ``address``).
+        """
         return tuple(
             name
             for name in cls.__annotations__
-            if not name.startswith("_")
+            if not name.startswith("_") and name != "parsed_address"
         )
 
     @staticmethod

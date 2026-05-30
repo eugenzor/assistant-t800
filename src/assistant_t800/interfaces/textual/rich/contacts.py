@@ -6,7 +6,6 @@ from typing import Final
 from rich import box
 
 from assistant_t800.domain.contacts import Contact
-from assistant_t800.localization import Message
 
 EMPTY_VALUE: Final[str] = "--"
 MULTI_VALUE_SUFFIX: Final[str] = "…"
@@ -30,12 +29,12 @@ def build_contacts_table(*, table_cls, contacts: Sequence[Contact], width: int):
         width=width,
     )
 
-    table.add_column(str(Message.CONTACT_NAME), style="bold green")
-    table.add_column(str(Message.CONTACT_PHONE))
-    table.add_column(str(Message.CONTACT_EMAIL))
+    table.add_column("Ім'я", style="bold green")
+    table.add_column("Телефон")
+    table.add_column("Email")
 
     if not is_narrow:
-        table.add_column(str(Message.CONTACT_BIRTHDAY))
+        table.add_column("День народження")
 
     for contact in contacts:
         row = [

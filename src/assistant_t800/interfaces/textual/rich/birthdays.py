@@ -6,7 +6,6 @@ from typing import Final
 from rich import box
 
 from assistant_t800.domain.birthdays import BirthdaysListContact
-from assistant_t800.localization import Message
 
 NARROW_LAYOUT_WIDTH: Final[int] = 100
 
@@ -33,8 +32,8 @@ def build_birthdays_table(
         width=width,
     )
 
-    table.add_column(str(Message.CONTACT_NAME), style="bold green")
-    table.add_column(str(Message.CONTACT_BIRTHDAY), style="white")
+    table.add_column("Ім'я", style="bold green")
+    table.add_column("День народження", style="white")
 
     if not is_narrow:
         table.add_column("Вік", justify="right", style="white")

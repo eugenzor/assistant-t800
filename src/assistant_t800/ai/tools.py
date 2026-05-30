@@ -5,7 +5,6 @@ Each tool receives ``RunContext[AgentDeps]`` and returns a
 Tools map 1:1 to methods on :class:`assistant_t800.services.contacts.ContactsService`.
 """
 
-from enum import StrEnum
 from typing import Optional
 
 from pydantic_ai import RunContext
@@ -13,6 +12,7 @@ from pydantic_ai.messages import ToolReturn
 
 from assistant_t800.ai.deps import AgentDeps
 from assistant_t800.ai.utils import (
+    ContactField,
     coalesce_read_fields,
     format_birthdays_for_llm,
     format_contacts_for_llm,
@@ -22,23 +22,6 @@ from assistant_t800.ai.results import DisplayPayload
 from assistant_t800.application.normalizers import normalize_address, normalize_phone
 from assistant_t800.domain.contacts import Contact
 from assistant_t800.services.contacts import ContactsService
-
-
-class ContactField(StrEnum):
-    """User-facing contact attribute names."""
-
-    NAME = "name"
-    PHONES = "phones"
-    EMAILS = "emails"
-    ADDRESS = "address"
-    BIRTHDAY = "birthday"
-    NOTE = "note"
-    TAGS = "tags"
-
-
-CONTACT_FIELD_NAMES: frozenset[str] = frozenset(field.value for field in ContactField)
-
-DEFAULT_READ_TOOL_FIELDS: tuple[ContactField, ...] = (ContactField.NAME,)
 
 
 def _ok(message: str, display: DisplayPayload | None = None) -> ToolReturn[str]:

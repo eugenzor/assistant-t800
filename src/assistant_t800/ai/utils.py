@@ -10,17 +10,11 @@ from assistant_t800.domain.birthdays import BirthdaysListContact
 from assistant_t800.domain.contacts import Contact
 
 
-class ContactField(StrEnum):
-    """User-facing contact attribute names."""
-
-    NAME = "name"
-    PHONES = "phones"
-    EMAILS = "emails"
-    ADDRESS = "address"
-    BIRTHDAY = "birthday"
-    NOTE = "note"
-    TAGS = "tags"
-
+ContactField = StrEnum(
+    "ContactField",
+    {name.upper(): name for name in Contact.public_fields()},
+)
+ContactField.__doc__ = "User-facing contact attribute names."
 
 CONTACT_FIELD_NAMES: frozenset[str] = frozenset(field.value for field in ContactField)
 
