@@ -102,6 +102,20 @@ def test_get_contact_missing_has_no_display(ctx, presenter):
     assert result.metadata is None
 
 
+# ---------- print_text ----------
+
+
+def test_print_text_returns_text_display_payload(ctx, presenter):
+    markdown = "**Іван** — +380501234567"
+    result = tools.print_text(ctx, markdown)
+
+    assert presenter.refresh_calls == []
+    assert presenter.print_calls == [], "tools must not call the presenter directly"
+    assert isinstance(result.metadata, DisplayPayload)
+    assert result.metadata.kind == "text"
+    assert result.metadata.text == markdown
+
+
 # ---------- list_contacts ----------
 
 

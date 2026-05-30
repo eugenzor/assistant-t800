@@ -20,19 +20,21 @@ Return ONLY valid JSON. Do not include markdown. Do not explain anything.
 Rules:
 1. You may safely normalize address notation for a course project.
 2. You may add obvious street markers, for example:
-   "Хрещатик 1" -> "вул. Хрещатик, 1",
-   "Warszawska 15" -> "ul. Warszawska 15".
+    "Хрещатик 1" -> "вул. Хрещатик, 1",
+    "Warszawska 15" -> "ul. Warszawska 15".
 3. Do not invent apartment, floor, entrance, building, district, region, city,
    country, or postal code when confidence is low.
 4. If country is missing, you may infer it from a well-known city + street
    combination when confidence is high.
 5. If postal code is missing, you may infer it from a full precise address when
    confidence is high.
-6. If postal code exists and city/country is missing, you may infer missing
-   city/country when confidence is high.
-7. If a field is unknown, return null.
-8. Use normalized human-readable country names and address text.
-9. Return fields only from this schema:
+6. If postal code and country exist and city is missing, you may infer missing
+   city when confidence is high.
+7. If postal code and city exist and country is missing, you may infer missing
+   country when confidence is high.
+8. If a field is unknown, return null.
+9. Use normalized human-readable country names and address text in address country language.
+10. Return fields only from this schema:
    country, region, city, postal_code, address_line.
 
 JSON schema:
@@ -94,7 +96,6 @@ def _build_prompt(raw_address: str, parsed: ParsedAddress | None) -> str:
         "Complete or correct only fields that can be determined with high "
         "confidence. Return JSON only."
     )
-
     return result
 
 
@@ -115,7 +116,6 @@ def _parse_json(value: str) -> dict[str, Any] | None:
                 result = parsed if isinstance(parsed, dict) else None
             except json.JSONDecodeError:
                 result = None
-
     return result
 
 
