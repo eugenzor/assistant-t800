@@ -118,6 +118,8 @@ class AssistantApp(App):
             "[bold green]Арні:[/bold green] Готовий до роботи. "
             "Спробуйте: «Додай контакт на ім'я Аліса»."
         )
+        # Render the welcome header once the display pane has been sized.
+        self.call_after_refresh(self._presenter.welcome)
         self._input.focus()
 
     def _add_message(self, markup: str) -> Static:
