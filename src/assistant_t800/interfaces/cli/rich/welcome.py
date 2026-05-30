@@ -16,10 +16,12 @@ def display_welcome(presenter: "RichCliPresenter") -> None:
     hints.append(f"{Message.WELCOME_HINTS_TITLE}:\n", style="bold cyan")
     hints.append("  • ", style="cyan")
     hints.append(f"{Message.WELCOME_QUOTES_HINT}\n", style="white")
-    hints.append('    add "John Smith" 0991112233 "New York"\n', style="dim")
+    hints.append(
+        '    add "John Smith" +17739992233 "USA, New York, 77th Street"\n', style="dim"
+    )
     hints.append("  • ", style="cyan")
     hints.append(f"{Message.WELCOME_MULTI_VALUE_HINT}\n", style="white")
-    hints.append("    add-phone John 0991112233;0992223344\n", style="dim")
+    hints.append("    add-phone John 17739992233;0509992233\n", style="dim")
     hints.append("  • ", style="cyan")
     hints.append(f"{Message.WELCOME_REMOVE_HINT}\n", style="white")
     hints.append("  • ", style="cyan")

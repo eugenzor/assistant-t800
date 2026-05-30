@@ -7,30 +7,30 @@ from assistant_t800.application.results import AppResult, ResultStatus
 from assistant_t800.domain.contacts import Contact
 from assistant_t800.interfaces.cli.prompting import EditableInputFunc, TextInputFunc
 from assistant_t800.interfaces.cli.presenter import CliPresenter
-from assistant_t800.interfaces.rich.birthdays import (
+from assistant_t800.interfaces.cli.rich.birthdays import (
     display_birthdays_table,
     is_birthdays_list,
 )
-from assistant_t800.interfaces.rich.contact_card import (
+from assistant_t800.interfaces.cli.rich.contact_card import (
     display_contact_card,
     is_contact,
 )
-from assistant_t800.interfaces.rich.contacts import (
+from assistant_t800.interfaces.cli.rich.contacts import (
     display_contacts_table,
     is_contact_list,
 )
-from assistant_t800.interfaces.rich.header import (
+from assistant_t800.interfaces.cli.rich.header import (
     display_results_header,
     display_results_title,
     display_welcome_header,
 )
-from assistant_t800.interfaces.rich.help import display_help
-from assistant_t800.interfaces.rich.inline_edit import (
+from assistant_t800.interfaces.cli.rich.help import display_help
+from assistant_t800.interfaces.cli.rich.inline_edit import (
     request_note_edit,
     request_tag_edit,
 )
-from assistant_t800.interfaces.rich.status import display_status
-from assistant_t800.interfaces.rich.welcome import display_welcome
+from assistant_t800.interfaces.cli.rich.status import display_status
+from assistant_t800.interfaces.cli.rich.welcome import display_welcome
 from assistant_t800.localization import Message, render_message
 
 

@@ -71,7 +71,11 @@ class ContactsRepository:
         """Search contacts by phone."""
         return self._filter(
             lambda contact, value: any(
-                value in self._search_key(item.value) for item in contact.phones
+                (
+                    value in self._search_key(item.value)
+                    or value in self._search_key(str(item))
+                )
+                for item in contact.phones
             ),
             query,
         )
@@ -165,8 +169,9 @@ class ContactsRepository:
         searchable = [
             contact.name.value,
             *(item.value for item in contact.phones),
+            *(str(item) for item in contact.phones),
             *(item.value for item in contact.emails),
-            contact.address.value if contact.address is not None else "",
+            contact.formatted_address if contact.address is not None else "",
             str(contact.birthday) if contact.birthday is not None else "",
             contact.note if contact.note != SystemValue.EMPTY_TEXT.value else "",
             *contact.tags,

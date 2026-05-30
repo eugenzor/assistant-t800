@@ -153,12 +153,7 @@ class TagEditResolver:
 
 
 class SuggestTagsResolver:
-    """Resolve interactive AI tag suggestion commands before dispatch.
-
-    Merges existing tags with AI suggestions before handing off to the
-    edit-tags handler, preserving existing tags through the wipe-and-replace
-    semantics of edit-tags.
-    """
+    """Resolve interactive AI tag suggestion commands before dispatch."""
 
     SUGGEST_TAGS_COMMAND = "suggest-tags"
     EDIT_TAGS_COMMAND = "edit-tags"
@@ -175,62 +170,83 @@ class SuggestTagsResolver:
         self._editable_func = editable_func
 
     def resolve(self, raw_input: str) -> str | AppResult:
-        """Return resolved command input or direct app result when needed."""
+        """Return resolved edit-tags input or direct app result."""
         owner = self._resolve_owner(raw_input)
 
         if owner is None or self._editable_func is None:
             result = raw_input
         else:
-            result = self._resolve_ai_suggest(owner)
+            result = self._resolve_tag_suggestions(owner)
 
         return result
 
-    def _resolve_ai_suggest(self, name: str) -> str | AppResult:
-        """Run AI tag suggestion + inline editor for one contact."""
+    def _resolve_tag_suggestions(self, name: str) -> str | AppResult:
+        """Suggest tags with AI and pass them through the tag editor."""
         try:
             contact = self._context.contacts.get_contact(name)
         except KeyError:
             result = AppResult.warning(ErrorCode.NAME_NOT_FOUND, query=name)
         else:
-            result = self._suggest_for_contact(contact, name)
+            try:
+                suggested_tags = self._suggest_tags(name)
+            except Exception as error:
+                result = AppResult.fail(
+                    ErrorCode.SUGGEST_TAGS_FAILED,
+                    data=contact,
+                    reason=str(error),
+                )
+            else:
+                if not suggested_tags:
+                    result = AppResult.info(
+                        Message.SUGGEST_TAGS_NONE,
+                        data=contact,
+                        name=contact.name.value,
+                    )
+                else:
+                    default_tags = self._merge_tags(contact.tags, suggested_tags)
+                    edited_tags = self._presenter.request_tag_edit(
+                        contact=contact,
+                        current_tags=default_tags,
+                        editable_func=self._editable_func,
+                    )
+
+                    if edited_tags is None:
+                        result = AppResult.ok(data=contact)
+                    else:
+                        result = self._build_input(
+                            self.EDIT_TAGS_COMMAND,
+                            name,
+                            edited_tags,
+                        )
 
         return result
 
-    def _suggest_for_contact(self, contact, name: str) -> str | AppResult:
-        """Call the AI, merge with existing, prompt the user, and rewrite."""
-        try:
-            ai_new = self._context.contacts.suggest_tags(name)
-        except Exception as error:
-            result = AppResult.fail(
-                ErrorCode.SUGGEST_TAGS_FAILED,
-                reason=str(error),
-            )
-        else:
-            if not ai_new:
-                result = AppResult.info(Message.SUGGEST_TAGS_NONE, name=name)
-            else:
-                merged = contact.tags | set(ai_new)
-                default_value = self._context.contacts.format_tags(merged)
-                edited = self._presenter.request_tag_edit(
-                    contact=contact,
-                    current_tags=default_value,
-                    editable_func=self._editable_func,
-                )
+    def _suggest_tags(self, name: str) -> list[str]:
+        """Call AI tag suggestion and clean the raw result."""
+        from assistant_t800.ai.tag_suggester import suggest_tags
 
-                if edited is None:
-                    result = AppResult.ok(data=contact)
-                else:
-                    result = self._build_input(self.EDIT_TAGS_COMMAND, name, edited)
+        snapshot = self._context.contacts.tag_suggestion_snapshot(name)
+        raw_tags = suggest_tags(snapshot)
+        result = self._context.contacts.clean_suggested_tags(raw_tags, name)
 
         return result
 
     def _resolve_owner(self, raw_input: str) -> str | None:
-        """Return contact name when input requests interactive AI suggestion."""
+        """Return contact name when input requests AI tag suggestions."""
         result = _resolve_interactive_owner(
             raw_input=raw_input,
             registry=self._context.registry,
             command_name=self.SUGGEST_TAGS_COMMAND,
         )
+
+        return result
+
+    @staticmethod
+    def _merge_tags(existing_tags: set[str], suggested_tags: list[str]) -> str:
+        """Return editable tag text with manual tags first."""
+        separator = f"{SystemValue.MULTI_VALUE_SEPARATORS.value[0]} "
+        ordered_tags = [*sorted(existing_tags), *suggested_tags]
+        result = separator.join(ordered_tags)
 
         return result
 

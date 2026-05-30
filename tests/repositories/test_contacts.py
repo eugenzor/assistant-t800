@@ -199,7 +199,7 @@ def test_search_matches_by_name():
 def test_search_matches_by_phone():
     repo = ContactsRepository()
     contact = _make_contact("Іван")
-    contact.add_phone("0501234567")
+    contact.add_phone("1234567890")
     repo.add(contact)
 
     result = repo.search("12345")
@@ -221,7 +221,7 @@ def test_search_matches_by_email():
 def test_search_matches_by_address():
     repo = ContactsRepository()
     contact = _make_contact("Іван")
-    contact.set_address(country="UA", city="Kyiv", line="вул. Хрещатик 1")
+    contact.set_address("Kyiv, Ukraine")
     repo.add(contact)
 
     result = repo.search("kyiv")
@@ -295,11 +295,11 @@ def test_search_name_partial_match():
 def test_search_name_ignores_phone_and_email_fields():
     repo = ContactsRepository()
     contact = _make_contact("Олена")
-    contact.add_phone("0501234567")
+    contact.add_phone("1234567890")
     contact.add_email("ivan@example.com")
     repo.add(contact)
 
-    assert repo.search_name("0501234567") == []
+    assert repo.search_name("1234567890") == []
     assert repo.search_name("ivan") == []
 
 
@@ -309,11 +309,11 @@ def test_search_name_ignores_phone_and_email_fields():
 def test_search_phone_matches_any_phone():
     repo = ContactsRepository()
     contact = _make_contact("Іван")
-    contact.add_phone("0501234567")
-    contact.add_phone("0509998877")
+    contact.add_phone("1234567890")
+    contact.add_phone("9876543210")
     repo.add(contact)
 
-    result = repo.search_phone("9998")
+    result = repo.search_phone("9876")
 
     assert result == [contact]
 

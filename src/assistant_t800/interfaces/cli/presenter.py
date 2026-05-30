@@ -100,9 +100,9 @@ class CliPresenter:
             f"""
             {Message.WELCOME_HINTS_TITLE}:
               • {Message.WELCOME_QUOTES_HINT}
-                add "John Smith" 0991112233 "New York"
+                add "John Smith" +17739992233 "USA, New York, 77th Street"
               • {Message.WELCOME_MULTI_VALUE_HINT}
-                add-phone John 0991112233;0992223344
+                add-phone John 17739992233;0509992233
               • {Message.WELCOME_REMOVE_HINT}
               • {Message.WELCOME_HELP_HINT}
     
@@ -161,14 +161,14 @@ class CliPresenter:
 
         if contact.phones:
             label = str(Message.CONTACT_PHONE)
-            rows.append(f"{label}: " + "; ".join(item.value for item in contact.phones))
+            rows.append(f"{label}: " + "; ".join(str(item) for item in contact.phones))
 
         if contact.emails:
             label = str(Message.CONTACT_EMAIL)
             rows.append(f"{label}: " + "; ".join(item.value for item in contact.emails))
 
         if contact.address is not None:
-            rows.append(f"{Message.CONTACT_ADDRESS}: {contact.address.value}")
+            rows.append(f"{Message.CONTACT_ADDRESS}: {contact.formatted_address}")
 
         if contact.birthday is not None:
             rows.append(f"{Message.CONTACT_BIRTHDAY}: {contact.birthday}")

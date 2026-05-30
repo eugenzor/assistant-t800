@@ -7,6 +7,7 @@ from assistant_t800.application.contacts_args import (
     ContactDraft,
 )
 from assistant_t800.application.context import AppContext
+from assistant_t800.application.normalizers import normalize_address, normalize_phone
 from assistant_t800.application.results import AppResult
 from assistant_t800.domain.contacts import Contact
 from assistant_t800.localization import ErrorCode, Message
@@ -238,15 +239,13 @@ def edit_tags(context: AppContext) -> AppResult:
 
 
 def suggest_tags(_context: AppContext) -> AppResult:
-    """Stub: this command is interactive-only via SuggestTagsResolver.
-
-    Reached only when the resolver couldn't intercept (e.g., prompt_toolkit
-    unavailable). Tells the user to run interactively or use edit-tags.
-    """
-    return AppResult.fail(
+    """Return fallback result when interactive AI tag suggestion is unavailable."""
+    result = AppResult.fail(
         ErrorCode.SUGGEST_TAGS_INTERACTIVE_ONLY,
         command="suggest-tags",
     )
+
+    return result
 
 
 def add_contact(context: AppContext) -> AppResult:
@@ -262,17 +261,17 @@ def add_contact(context: AppContext) -> AppResult:
 
 
 def set_address(context: AppContext) -> AppResult:
-    """Set or replace a contact address from ``key=value`` arguments."""
-    parsed = ContactArgumentsParser.parse_set_address(context.raw_args)
-
-    if isinstance(parsed, AppResult):
-        return parsed
-
-    name, address = parsed
+    """Set or replace a contact address."""
+    raw_address = context.args["address"]
+    parsed_address = normalize_address(raw_address)
 
     return _mutate_contact(
         context=context,
-        action=lambda: context.contacts.set_address(name, address),
+        action=lambda: context.contacts.set_address(
+            context.args["name"],
+            raw_address,
+            parsed_address,
+        ),
         message_code=Message.CONTACT_UPDATED,
         field="address",
     )
@@ -301,15 +300,26 @@ def add_phone(context: AppContext) -> AppResult:
         value_name="phone",
     )
 
-    result = (
-        parsed
-        if isinstance(parsed, AppResult)
-        else _add_values(
-            name=parsed[0],
-            values=parsed[1],
-            method=context.contacts.add_phones,
-        )
-    )
+    if isinstance(parsed, AppResult):
+        result = parsed
+    else:
+        name, raw_values = parsed
+
+        try:
+            values = _normalize_phones(raw_values)
+        except ValueError as error:
+            result = AppResult.fail(
+                ErrorCode.VALIDATION_ERROR,
+                data=_get_optional_contact(context, name),
+                reason=str(error),
+            )
+        else:
+            result = _add_values(
+                context=context,
+                name=name,
+                values=values,
+                method=context.contacts.add_phones,
+            )
 
     return result
 
@@ -326,6 +336,7 @@ def add_email(context: AppContext) -> AppResult:
         parsed
         if isinstance(parsed, AppResult)
         else _add_values(
+            context=context,
             name=parsed[0],
             values=parsed[1],
             method=context.contacts.add_emails,
@@ -385,22 +396,26 @@ def remove_phone(context: AppContext) -> AppResult:
         value_name="phone",
     )
 
-    result = (
-        parsed
-        if isinstance(parsed, AppResult)
-        else _remove_optional_values(
-            context=context,
-            name=parsed[0],
-            values=parsed[1],
-            current_values=lambda contact: tuple(item.value for item in contact.phones),
-            confirm_value_message=Message.CONFIRM_REMOVE_PHONE,
-            confirm_all_message=Message.CONFIRM_REMOVE_ALL_PHONES,
-            success_message=Message.REMOVED_PHONE,
-            remove_values=context.contacts.remove_phones,
-            remove_all=context.contacts.remove_all_phones,
-            empty_field="phone",
-        )
-    )
+    if isinstance(parsed, AppResult):
+        result = parsed
+    else:
+        try:
+            values = _normalize_phones(parsed[1])
+        except ValueError as error:
+            result = AppResult.fail(ErrorCode.VALIDATION_ERROR, reason=str(error))
+        else:
+            result = _remove_optional_values(
+                context=context,
+                name=parsed[0],
+                values=values,
+                current_values=lambda contact: tuple(item.value for item in contact.phones),
+                confirm_value_message=Message.CONFIRM_REMOVE_PHONE,
+                confirm_all_message=Message.CONFIRM_REMOVE_ALL_PHONES,
+                success_message=Message.REMOVED_PHONE,
+                remove_values=context.contacts.remove_phones,
+                remove_all=context.contacts.remove_all_phones,
+                empty_field="phone",
+            )
 
     return result
 
@@ -433,14 +448,32 @@ def remove_email(context: AppContext) -> AppResult:
     return result
 
 
+def _get_optional_contact(context: AppContext, name: str) -> Contact | None:
+    """Return contact for error payloads when it exists."""
+    try:
+        result = context.contacts.get_contact(name)
+    except KeyError:
+        result = None
+
+    return result
+
+
+def _normalize_phones(values: Sequence[str]) -> tuple[str, ...]:
+    """Normalize phone values before domain validation."""
+    result = tuple(normalize_phone(value) for value in values)
+
+    return result
+
 def _create_contact(context: AppContext, draft: ContactDraft) -> AppResult:
     """Create a contact from parsed draft."""
     try:
+        parsed_address = normalize_address(draft.address) if draft.address else None
         contact = context.contacts.add_contact(
             draft.name,
-            phones=draft.phones,
+            phones=_normalize_phones(draft.phones),
             emails=draft.emails,
             address=draft.address,
+            parsed_address=parsed_address,
             birthday=draft.birthday,
         )
         result = AppResult.ok(
@@ -512,6 +545,7 @@ def _mutate_contact(
 
 def _add_values(
     *,
+    context: AppContext,
     name: str,
     values: Sequence[str],
     method: Callable[[str, Sequence[str]], object],
@@ -528,7 +562,11 @@ def _add_values(
     except KeyError:
         result = AppResult.fail(ErrorCode.CONTACT_NOT_FOUND, name=name)
     except ValueError as error:
-        result = AppResult.fail(ErrorCode.VALIDATION_ERROR, reason=str(error))
+        result = AppResult.fail(
+            ErrorCode.VALIDATION_ERROR,
+            data=_get_optional_contact(context, name),
+            reason=str(error),
+        )
 
     return result
 
