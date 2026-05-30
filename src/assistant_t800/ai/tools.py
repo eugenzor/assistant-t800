@@ -12,7 +12,7 @@ from pydantic_ai.messages import ToolReturn
 
 from assistant_t800.ai.deps import AgentDeps
 from assistant_t800.ai.utils import (
-    ContactField,
+    ContactFieldName,
     coalesce_read_fields,
     format_birthdays_for_llm,
     format_contacts_for_llm,
@@ -135,13 +135,13 @@ def add_contact(
 def get_contact(
     ctx: RunContext[AgentDeps],
     name: str,
-    fields: list[ContactField] | None = None,
+    fields: list[ContactFieldName] | None = None,
 ) -> ToolReturn[str]:
     """Look up a single contact by name and show it in the UI panel.
 
     ``fields`` limits contact data returned to the LLM as JSON (not the UI panel).
-    Defaults to ``[ContactField.NAME]``; pass additional ``ContactField`` values when
-    more attributes are needed.
+    Defaults to ``["name"]``; pass additional field names (e.g. ``"phones"``,
+    ``"birthday"``) when more attributes are needed.
     """
     try:
         contact = ctx.deps.contacts_service.get_contact(name)
@@ -161,13 +161,13 @@ def get_contact(
 
 def list_contacts(
     ctx: RunContext[AgentDeps],
-    fields: list[ContactField] | None = None,
+    fields: list[ContactFieldName] | None = None,
 ) -> ToolReturn[str]:
     """Display all stored contacts in the UI panel.
 
     ``fields`` limits contact data returned to the LLM as JSON (not the UI panel).
-    Defaults to ``[ContactField.NAME]``; pass additional ``ContactField`` values when
-    more attributes are needed.
+    Defaults to ``["name"]``; pass additional field names (e.g. ``"phones"``,
+    ``"birthday"``) when more attributes are needed.
     """
     contacts = ctx.deps.contacts_service.list_contacts()
     return _contacts_read_result(
@@ -181,13 +181,13 @@ def list_contacts(
 def search_contacts(
     ctx: RunContext[AgentDeps],
     query: str,
-    fields: list[ContactField] | None = None,
+    fields: list[ContactFieldName] | None = None,
 ) -> ToolReturn[str]:
     """Search contacts across all searchable fields.
 
     ``fields`` limits contact data returned to the LLM as JSON (not the UI panel).
-    Defaults to ``[ContactField.NAME]``; pass additional ``ContactField`` values when
-    more attributes are needed.
+    Defaults to ``["name"]``; pass additional field names (e.g. ``"phones"``,
+    ``"birthday"``) when more attributes are needed.
     """
     matches = ctx.deps.contacts_service.search_contacts(query)
     return _contacts_read_result(
@@ -201,13 +201,13 @@ def search_contacts(
 def search_contacts_by_name(
     ctx: RunContext[AgentDeps],
     query: str,
-    fields: list[ContactField] | None = None,
+    fields: list[ContactFieldName] | None = None,
 ) -> ToolReturn[str]:
     """Search contacts by name only.
 
     ``fields`` limits contact data returned to the LLM as JSON (not the UI panel).
-    Defaults to ``[ContactField.NAME]``; pass additional ``ContactField`` values when
-    more attributes are needed.
+    Defaults to ``["name"]``; pass additional field names (e.g. ``"phones"``,
+    ``"birthday"``) when more attributes are needed.
     """
     matches = ctx.deps.contacts_service.search_contacts_by_name(query)
     return _contacts_read_result(
@@ -221,13 +221,13 @@ def search_contacts_by_name(
 def search_contacts_by_phone(
     ctx: RunContext[AgentDeps],
     query: str,
-    fields: list[ContactField] | None = None,
+    fields: list[ContactFieldName] | None = None,
 ) -> ToolReturn[str]:
     """Search contacts by phone number only.
 
     ``fields`` limits contact data returned to the LLM as JSON (not the UI panel).
-    Defaults to ``[ContactField.NAME]``; pass additional ``ContactField`` values when
-    more attributes are needed.
+    Defaults to ``["name"]``; pass additional field names (e.g. ``"phones"``,
+    ``"birthday"``) when more attributes are needed.
     """
     matches = ctx.deps.contacts_service.search_contacts_by_phone(query)
     return _contacts_read_result(
@@ -241,13 +241,13 @@ def search_contacts_by_phone(
 def search_contacts_by_email(
     ctx: RunContext[AgentDeps],
     query: str,
-    fields: list[ContactField] | None = None,
+    fields: list[ContactFieldName] | None = None,
 ) -> ToolReturn[str]:
     """Search contacts by email only.
 
     ``fields`` limits contact data returned to the LLM as JSON (not the UI panel).
-    Defaults to ``[ContactField.NAME]``; pass additional ``ContactField`` values when
-    more attributes are needed.
+    Defaults to ``["name"]``; pass additional field names (e.g. ``"phones"``,
+    ``"birthday"``) when more attributes are needed.
     """
     matches = ctx.deps.contacts_service.search_contacts_by_email(query)
     return _contacts_read_result(
@@ -261,13 +261,13 @@ def search_contacts_by_email(
 def search_contacts_by_note(
     ctx: RunContext[AgentDeps],
     query: str,
-    fields: list[ContactField] | None = None,
+    fields: list[ContactFieldName] | None = None,
 ) -> ToolReturn[str]:
     """Search contacts by note content only.
 
     ``fields`` limits contact data returned to the LLM as JSON (not the UI panel).
-    Defaults to ``[ContactField.NAME]``; pass additional ``ContactField`` values when
-    more attributes are needed.
+    Defaults to ``["name"]``; pass additional field names (e.g. ``"phones"``,
+    ``"birthday"``) when more attributes are needed.
     """
     matches = ctx.deps.contacts_service.search_contacts_by_note(query)
     return _contacts_read_result(
@@ -281,13 +281,13 @@ def search_contacts_by_note(
 def search_contacts_by_tag(
     ctx: RunContext[AgentDeps],
     query: str,
-    fields: list[ContactField] | None = None,
+    fields: list[ContactFieldName] | None = None,
 ) -> ToolReturn[str]:
     """Search contacts by tag only.
 
     ``fields`` limits contact data returned to the LLM as JSON (not the UI panel).
-    Defaults to ``[ContactField.NAME]``; pass additional ``ContactField`` values when
-    more attributes are needed.
+    Defaults to ``["name"]``; pass additional field names (e.g. ``"phones"``,
+    ``"birthday"``) when more attributes are needed.
     """
     matches = ctx.deps.contacts_service.search_contacts_by_tag(query)
     return _contacts_read_result(
