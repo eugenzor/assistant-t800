@@ -125,8 +125,10 @@ class Contact:
             region = self.parsed_address.region
             city = self.parsed_address.city
 
-            if (region and city
-                    and region.casefold() not in (city.casefold(), f"м. {city.casefold()}")
+            if (
+                region
+                and city
+                and region.casefold() not in (city.casefold(), f"м. {city.casefold()}")
             ):
                 result = f"{region}, {city}"
             else:
