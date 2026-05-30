@@ -48,7 +48,9 @@ class Contact:
 
     @staticmethod
     def key_fields() -> tuple[str, ...]:
-        return tuple("name",)
+        return tuple(
+            "name",
+        )
 
     def add_phone(self, phone: str) -> None:
         """Add a validated unique phone number to the contact."""
@@ -125,8 +127,10 @@ class Contact:
             region = self.parsed_address.region
             city = self.parsed_address.city
 
-            if (region and city
-                    and region.casefold() not in (city.casefold(), f"м. {city.casefold()}")
+            if (
+                region
+                and city
+                and region.casefold() not in (city.casefold(), f"м. {city.casefold()}")
             ):
                 result = f"{region}, {city}"
             else:
