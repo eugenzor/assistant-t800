@@ -4,6 +4,7 @@ Each tool receives ``RunContext[AgentDeps]`` and returns a
 ``ToolReturn`` with a short chat message and optional display metadata.
 Tools map 1:1 to methods on :class:`assistant_t800.services.contacts.ContactsService`.
 """
+
 from enum import StrEnum
 from typing import Optional
 

@@ -408,7 +408,9 @@ def remove_phone(context: AppContext) -> AppResult:
                 context=context,
                 name=parsed[0],
                 values=values,
-                current_values=lambda contact: tuple(item.value for item in contact.phones),
+                current_values=lambda contact: tuple(
+                    item.value for item in contact.phones
+                ),
                 confirm_value_message=Message.CONFIRM_REMOVE_PHONE,
                 confirm_all_message=Message.CONFIRM_REMOVE_ALL_PHONES,
                 success_message=Message.REMOVED_PHONE,
@@ -463,6 +465,7 @@ def _normalize_phones(values: Sequence[str]) -> tuple[str, ...]:
     result = tuple(normalize_phone(value) for value in values)
 
     return result
+
 
 def _create_contact(context: AppContext, draft: ContactDraft) -> AppResult:
     """Create a contact from parsed draft."""

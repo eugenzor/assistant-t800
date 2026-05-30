@@ -4,6 +4,7 @@ Tests verify service state changes and structured display metadata returned
 by tools. Tools must not call the presenter directly — display updates are
 applied by ``run_chat`` after the agent run.
 """
+
 from enum import StrEnum
 
 import pytest
@@ -575,6 +576,7 @@ def test_list_contacts_return_value_truncates_when_over_cap(ctx, monkeypatch):
     assert "Contact1" in result.return_value
     assert "Contact2" not in result.return_value
     assert "Ще 1 контакт не показано" in result.return_value
+
 
 def test_search_upcoming_birthdays_return_value_includes_records(ctx, monkeypatch):
     fake = [

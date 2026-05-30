@@ -1,6 +1,5 @@
 """Tests for Rich contact table phone display formatting."""
 
-
 from assistant_t800.domain.contacts import Contact
 from assistant_t800.domain.fields import Name
 from assistant_t800.interfaces.cli.rich.contacts import _render_first_value

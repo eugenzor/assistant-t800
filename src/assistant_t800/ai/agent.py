@@ -4,12 +4,10 @@ Builds a ``pydantic_ai``-based agent. Tool functions are defined in
 :mod:`assistant_t800.ai.tools`.
 """
 
-import json
 import os
 from functools import lru_cache
 
 from pydantic_ai import Agent
-from pydantic import BaseModel
 
 from assistant_t800.ai.deps import AgentDeps
 from assistant_t800.ai.display import apply_display, extract_display_payloads
@@ -213,5 +211,3 @@ _TAG_SUGGESTION_PROMPT = """\
 Вхід: {"name": "Боб"}
 Вихід: {"tags": []}
 """
-
-

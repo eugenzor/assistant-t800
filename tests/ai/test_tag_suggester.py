@@ -144,6 +144,7 @@ def test_suggest_tags_passes_prompt_to_agent(mock_get_agent: Mock) -> None:
     assert "Alice" in prompt
     assert "USA" in prompt
 
+
 @patch("assistant_t800.ai.tag_suggester._get_agent")
 def test_suggest_tags_does_not_remove_existing_tags_from_ai_result(
     mock_get_agent: Mock,
