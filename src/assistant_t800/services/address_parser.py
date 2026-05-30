@@ -57,7 +57,6 @@ class _AddressParser:
             postal_code=self._postal_code,
             address_line=self._address_line,
         )
-
         return result
 
     def _extract_country(self) -> None:
