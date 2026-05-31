@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Assistant T800 — захист проєкту</title>
+<style>
+  :root{
+    --bg:#0d1117; --bg2:#161b22; --panel:#1c2430;
+    --fg:#e6edf3; --muted:#9aa7b4; --line:#2b3440;
+    --accent:#ffb000; --accent2:#36c2ff; --ok:#3fb950; --code:#ffd9a0;
+    --mono:'SF Mono',ui-monospace,'JetBrains Mono','Cascadia Code',Consolas,monospace;
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--fg); font-family:var(--sans);
+    overflow:hidden; -webkit-font-smoothing:antialiased;
+  }
+
+  /* progress + chrome */
+  #progress{position:fixed;top:0;left:0;height:3px;background:var(--accent);width:0;z-index:50;transition:width .25s ease}
+  #counter{position:fixed;bottom:18px;right:24px;color:var(--muted);font-size:14px;font-family:var(--mono);z-index:40;letter-spacing:.5px}
+  #brand{position:fixed;bottom:18px;left:24px;color:var(--muted);font-size:13px;z-index:40;letter-spacing:.5px}
+  #brand b{color:var(--accent);font-weight:600}
+
+  /* deck */
+  .deck{height:100vh;width:100vw;position:relative}
+  .slide{
+    position:absolute;inset:0;display:none;
+    padding:6vh 8vw 9vh; flex-direction:column; justify-content:center; overflow:hidden;
+    animation:fade .35s ease;
+  }
+  .slide.active{display:flex}
+  @keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+  .kicker{color:var(--accent);font-family:var(--mono);font-size:clamp(13px,1.4vw,18px);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px}
+  h1.title{font-size:clamp(40px,7vw,104px);font-weight:800;line-height:1.02;letter-spacing:-1px}
+  h2{font-size:clamp(26px,4vw,52px);font-weight:700;line-height:1.1;margin-bottom:26px;letter-spacing:-.5px}
+  h2 .num{color:var(--accent);font-family:var(--mono);font-weight:700;margin-right:14px}
+
+  ul.points{list-style:none;display:flex;flex-direction:column;gap:18px;max-width:1100px}
+  ul.points li{
+    position:relative;padding-left:38px;font-size:clamp(18px,2.3vw,30px);line-height:1.4;color:var(--fg)
+  }
+  ul.points li::before{
+    content:"▸";position:absolute;left:0;top:0;color:var(--accent);font-weight:700
+  }
+  .muted{color:var(--muted)}
+  code,.mono{font-family:var(--mono);color:var(--code);background:rgba(255,176,0,.10);
+    border:1px solid rgba(255,176,0,.22);border-radius:6px;padding:2px 8px;font-size:.92em}
+  .flow code{white-space:nowrap}
+
+  /* title slide */
+  .slide.cover{justify-content:center}
+  .cover .logo{font-family:var(--mono);color:var(--accent);font-size:clamp(14px,1.6vw,20px);letter-spacing:6px;margin-bottom:22px}
+  .cover .sub{font-size:clamp(18px,2.4vw,30px);color:var(--muted);margin-top:22px;max-width:900px}
+  .cover .meta{margin-top:48px;color:var(--muted);font-size:clamp(15px,1.8vw,20px);font-family:var(--mono);
+    border-top:1px solid var(--line);padding-top:22px;display:inline-block}
+  .cover .meta b{color:var(--fg);font-weight:500}
+
+  /* requirements two columns */
+  .req{display:grid;grid-template-columns:1fr 1fr;gap:26px 48px;max-width:1300px;align-items:start}
+  .req .col h3{font-size:clamp(15px,1.7vw,20px);color:var(--accent);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:16px;font-family:var(--mono)}
+  .req .col.add h3{color:var(--accent2)}
+  .req ul{list-style:none;display:flex;flex-direction:column;gap:11px}
+  .req li{position:relative;padding-left:34px;font-size:clamp(15px,1.7vw,22px);line-height:1.35}
+  .req li::before{content:"✓";position:absolute;left:0;top:-1px;color:var(--ok);font-weight:800;
+    background:rgba(63,185,80,.14);border:1px solid rgba(63,185,80,.4);border-radius:5px;
+    width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:15px}
+  .badge{display:inline-block;font-family:var(--mono);font-size:13px;color:var(--bg);background:var(--ok);
+    border-radius:20px;padding:3px 12px;margin-left:10px;font-weight:700;vertical-align:middle}
+  .badge.b2{background:var(--accent2)}
+
+  /* flow / pipeline */
+  .pipeline{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:8px}
+  .pipeline .node{font-family:var(--mono);font-size:clamp(15px,1.9vw,24px);background:var(--panel);
+    border:1px solid var(--line);border-radius:10px;padding:12px 18px;color:var(--fg)}
+  .pipeline .arrow{color:var(--accent);font-size:clamp(18px,2.2vw,26px)}
+  .aside{margin-top:26px;color:var(--muted);font-size:clamp(15px,1.7vw,21px);max-width:1000px;line-height:1.45}
+
+  /* layered architecture diagram (slide 4) */
+  .arch{display:flex;gap:30px;align-items:stretch;max-width:1240px;width:100%}
+  .arch .layers{flex:1;display:flex;flex-direction:column}
+  .arch .layer{display:flex;align-items:center;gap:20px;
+    background:linear-gradient(90deg,var(--panel),rgba(28,36,48,.35));
+    border:1px solid var(--line);border-left:5px solid var(--accent);border-radius:11px;padding:13px 20px}
+  .arch .layer .ln{font-family:var(--mono);color:var(--fg);font-weight:700;
+    font-size:clamp(15px,1.7vw,22px);min-width:160px}
+  .arch .layer .ld{color:var(--muted);font-size:clamp(12.5px,1.35vw,17px);line-height:1.3}
+  .arch .layer .ld b{color:var(--fg);font-weight:600}
+  .arch .conn{height:15px;display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:14px;opacity:.8}
+  .arch .cross{flex:0 0 250px;border:1px dashed rgba(54,194,255,.5);border-radius:14px;
+    background:rgba(54,194,255,.05);padding:20px;display:flex;flex-direction:column;gap:12px;justify-content:center}
+  .arch .cross h4{font-family:var(--mono);color:var(--accent2);font-size:12.5px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px}
+  .arch .cross .cc{font-family:var(--mono);font-size:clamp(14px,1.5vw,19px);color:var(--fg);
+    background:rgba(54,194,255,.1);border:1px solid rgba(54,194,255,.32);border-radius:8px;padding:9px 14px;text-align:center}
+  .arch .cross .note{color:var(--muted);font-size:12.5px;line-height:1.35;margin-top:4px}
+  .arch .flowtag{margin-top:18px;color:var(--muted);font-size:clamp(13px,1.5vw,18px)}
+  .arch .flowtag b{color:var(--accent)}
+  .archsvg{width:100%;max-width:1185px;height:auto;display:block}
+
+  /* alias rows */
+  .alias{display:flex;flex-direction:column;gap:16px;max-width:1100px}
+  .alias .row{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .alias .lbl{font-family:var(--mono);font-size:clamp(13px,1.5vw,18px);color:var(--muted);min-width:190px;text-transform:uppercase;letter-spacing:1px}
+  .chip{font-family:var(--mono);font-size:clamp(15px,1.9vw,24px);background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;padding:8px 14px;color:var(--fg)}
+  .chip.hi{border-color:var(--accent);color:var(--accent);background:rgba(255,176,0,.08)}
+
+  /* steps */
+  .steps{display:flex;flex-direction:column;gap:18px;max-width:1100px;counter-reset:s}
+  .steps .step{display:flex;align-items:center;gap:20px;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:18px 22px}
+  .steps .n{font-family:var(--mono);font-weight:800;font-size:clamp(20px,2.4vw,30px);color:var(--accent);
+    min-width:46px;height:46px;border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;justify-content:center}
+  .steps .txt{font-size:clamp(16px,2vw,26px)}
+  .steps .txt small{display:block;color:var(--muted);font-size:.7em;margin-top:3px}
+
+  /* two-pane TUI viz */
+  .panes{display:flex;gap:14px;max-width:980px;height:230px;margin-top:6px}
+  .panes .p{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:16px;display:flex;flex-direction:column}
+  .panes .p .h{font-family:var(--mono);color:var(--muted);font-size:14px;margin-bottom:10px;letter-spacing:1px}
+  .panes .left{flex:0 0 70%}
+  .panes .right{flex:0 0 calc(30% - 14px);border-color:rgba(54,194,255,.4)}
+  .panes .right .h{color:var(--accent2)}
+  .panes .bar{height:12px;border-radius:6px;background:var(--line);margin-bottom:8px}
+  .panes .bar.s{width:70%}.panes .bar.m{width:90%}.panes .bar.l{width:55%}
+  .panes .msg{font-family:var(--mono);font-size:13px;color:var(--muted);margin-top:auto}
+
+  /* summary big */
+  .slide.final h2{font-size:clamp(30px,5vw,64px)}
+  .thanks{font-size:clamp(28px,5vw,68px);font-weight:800;margin-top:10px}
+  .thanks .q{color:var(--accent)}
+
+  /* speaker notes */
+  #notes{position:fixed;left:0;right:0;bottom:0;max-height:42vh;overflow:auto;
+    background:rgba(8,11,16,.97);border-top:2px solid var(--accent);
+    padding:20px 8vw;display:none;z-index:60;font-size:17px;line-height:1.55;color:#cdd7e1}
+  #notes.show{display:block}
+  #notes h4{color:var(--accent);font-family:var(--mono);font-size:13px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px}
+  #notes p{margin-bottom:10px;max-width:1100px}
+  #hint{position:fixed;top:14px;right:18px;color:var(--muted);font-size:12px;font-family:var(--mono);z-index:40;opacity:.7}
+
+  @media (max-width:760px){
+    .req{grid-template-columns:1fr}
+    .alias .lbl{min-width:auto}
+    .panes{height:auto;flex-direction:column}
+    .panes .left,.panes .right{flex:auto}
+  }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div id="hint">← → навігація · S нотатки · F фуллскрін</div>
+<div class="deck" id="deck">
+
+  <!-- 1 -->
+  <section class="slide cover active"
+    data-notes="Доброго дня. Представляємо нашу команду і наш проєкт — Assistant T800. Нас [кількість] осіб: [імена учасників]. Ми розробили персонального CLI/TUI-помічника для керування контактами і нотатками, з опційним AI-режимом. Зараз розкажемо, що саме ми зробили і як це влаштовано.">
+    <div class="logo">PERSONAL ASSISTANT · CLI / TUI</div>
+    <h1 class="title">Assistant&nbsp;T800</h1>
+    <div class="sub">Термінальний помічник для контактів і нотаток з опційним AI-режимом «Арні»</div>
+    <div class="meta"><b>Автори:</b> [імена] &nbsp;·&nbsp; <b>Група:</b> [група] &nbsp;·&nbsp; <b>Дата захисту:</b> [дата]</div>
+  </section>
+
+  <!-- 2 -->
+  <section class="slide"
+    data-notes="Почнемо з головного — відповідності вимогам. Ось чекліст із ТЗ, пройдемося по ньому швидко. Зберігаємо контакти повністю: ім'я, адресу, телефони, email і день народження. Дні народження рахуємо на N днів уперед, з автоматичним перенесенням вихідних на понеділок. Телефон і email валідуємо при кожному введенні — некоректне значення не пройде. Пошук є, редагування й видалення є. Нотатки: додаємо, шукаємо, редагуємо, видаляємо. Дані зберігаються на диск і не губляться при перезапуску. Додаткові пункти теж закриті: теги, пошук за тегами і підказки команд. Це давало плюс 10 балів. Далі розповімо, як усе це влаштовано всередині.">
+    <div class="kicker">Відповідність ТЗ</div>
+    <h2><span class="num">01</span>Вимоги проєкту: виконано все</h2>
+    <div class="req">
+      <div class="col">
+        <h3>Основні <span class="badge">90 балів</span></h3>
+        <ul>
+          <li>Контакти: ім'я, адреса, телефон, email, день народження</li>
+          <li>Дні народження через N днів від поточної дати</li>
+          <li>Валідація телефону та email при додаванні й редагуванні</li>
+          <li>Пошук контактів</li>
+          <li>Редагування та видалення контактів</li>
+          <li>Нотатки: додавання, пошук, редагування, видалення</li>
+          <li>Збереження на диск, відновлення після перезапуску</li>
+        </ul>
+      </div>
+      <div class="col add">
+        <h3>Додаткові <span class="badge b2">10 балів</span></h3>
+        <ul>
+          <li>Теги, пошук і сортування за тегами</li>
+          <li>Інтелектуальний аналіз: підказки команд</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="slide"
+    data-notes="Ідея проєкту народилася з простої незручності. Контакти розкидані скрізь: хтось у телефоні, хтось у нотатках, хтось узагалі в пам'яті. Ми хотіли одне місце в терміналі, де можна швидко знайти людину, подивитися її телефон, нотатку чи дату народження — і не перемикатися з роботи. Вийшло два режими. CLI — класичний рядковий інтерфейс із командами, автодоповненням і історією. TUI — повноцінний двопанельний застосунок у терміналі з AI-чатом. При цьому детермінований кор працює без AI-ключа: контакти, пошук, дні народження, нотатки, ручні теги, збереження. AI — опційний fallback у кількох місцях: розпізнавання нестандартних телефонів/адрес (normalize_phone/normalize_address → AI-парсери), розумні підказки команд і команда suggest-tags. Без ключа стандартні формати працюють, а ці AI-фічі деградують.">
+    <div class="kicker">Мотивація</div>
+    <h2><span class="num">02</span>Що ми будували і навіщо</h2>
+    <ul class="points">
+      <li>Контакти розкидані по різних місцях, шукати незручно</li>
+      <li>Ми хотіли один інструмент, який працює в терміналі й має AI під рукою</li>
+      <li class="muted">Два режими: <code>CLI</code> (команди + історія) і <code>TUI</code> з чатом «Арні»</li>
+    </ul>
+  </section>
+
+  <!-- 4 -->
+  <section class="slide"
+    data-notes="Ми розбили систему на шари. Зверху вниз: interfaces, application, services, repositories, domain, storage. Interfaces — це CLI і TUI, точки входу й рендеринг. Application оркеструє: там диспетчер команд, хендлери, структуровані результати AppResult і AppError. Services містять бізнес-логіку — головний тут ContactsService. Repositories ховають доступ до колекції контактів. Domain тримає моделі: Contact, Phone, Email, Address, Birthday разом із валідацією. Теги — не окрема модель, а атрибут set[str] усередині Contact. Storage відповідає за збереження на диск. Окремо стоять три речі, які пронизують усе: локалізація, підказки команд і AI. Завдяки такій структурі кожен шар можна тестувати й замінювати незалежно.">
+    <div class="kicker">Архітектура</div>
+    <h2><span class="num">03</span>Чисті шари</h2>
+    <svg class="archsvg" viewBox="0 0 1185 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Шарувата архітектура">
+      <defs>
+        <linearGradient id="spineGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#ffb000"/><stop offset="1" stop-color="#36c2ff"/>
+        </linearGradient>
+        <filter id="sh" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#000000" flood-opacity="0.40"/>
+        </filter>
+        <style>
+          .lname{font-family:'SF Mono',ui-monospace,monospace;font-weight:700;font-size:19px}
+          .lsub{font-family:'Inter',system-ui,sans-serif;font-size:13px;fill:#9aa7b4}
+          .num{font-family:'SF Mono',ui-monospace,monospace;font-weight:700;font-size:16px;fill:#10151c}
+          .cc{font-family:'SF Mono',ui-monospace,monospace;font-size:16px;fill:#e6edf3}
+          .cct{font-family:'SF Mono',ui-monospace,monospace;font-size:12px;fill:#36c2ff;letter-spacing:1.5px}
+          .rot{font-family:'SF Mono',ui-monospace,monospace;font-size:12px;fill:#9aa7b4;letter-spacing:3px}
+          .note{font-family:'Inter',system-ui,sans-serif;font-size:12px;fill:#9aa7b4}
+        </style>
+      </defs>
+
+      <line x1="167" y1="52" x2="167" y2="382" stroke="url(#spineGrad)" stroke-width="4" stroke-linecap="round"/>
+      <text class="rot" x="36" y="222" transform="rotate(-90 36 222)" text-anchor="middle">ПОТІК ЗАПИТУ</text>
+
+      <g stroke-width="1.5">
+        <line x1="185" y1="52"  x2="205" y2="52"  stroke="#ffb000" stroke-opacity="0.6"/>
+        <line x1="185" y1="118" x2="205" y2="118" stroke="#f0ab3c" stroke-opacity="0.6"/>
+        <line x1="185" y1="184" x2="205" y2="184" stroke="#cdba6a" stroke-opacity="0.6"/>
+        <line x1="185" y1="250" x2="205" y2="250" stroke="#8fc098" stroke-opacity="0.6"/>
+        <line x1="185" y1="316" x2="205" y2="316" stroke="#54c1cf" stroke-opacity="0.6"/>
+        <line x1="185" y1="382" x2="205" y2="382" stroke="#36c2ff" stroke-opacity="0.6"/>
+      </g>
+
+      <g filter="url(#sh)">
+        <rect x="205" y="24"  width="605" height="56" rx="12" fill="#ffb000" fill-opacity="0.09" stroke="#ffb000" stroke-opacity="0.55" stroke-width="1.5"/>
+        <rect x="205" y="90"  width="605" height="56" rx="12" fill="#f0ab3c" fill-opacity="0.09" stroke="#f0ab3c" stroke-opacity="0.55" stroke-width="1.5"/>
+        <rect x="205" y="156" width="605" height="56" rx="12" fill="#cdba6a" fill-opacity="0.09" stroke="#cdba6a" stroke-opacity="0.55" stroke-width="1.5"/>
+        <rect x="205" y="222" width="605" height="56" rx="12" fill="#8fc098" fill-opacity="0.09" stroke="#8fc098" stroke-opacity="0.55" stroke-width="1.5"/>
+        <rect x="205" y="288" width="605" height="56" rx="12" fill="#54c1cf" fill-opacity="0.09" stroke="#54c1cf" stroke-opacity="0.55" stroke-width="1.5"/>
+        <rect x="205" y="354" width="605" height="56" rx="12" fill="#36c2ff" fill-opacity="0.09" stroke="#36c2ff" stroke-opacity="0.55" stroke-width="1.5"/>
+      </g>
+
+      <text class="lname" x="230" y="50"  fill="#ffb000">interfaces</text>
+      <text class="lsub"  x="230" y="69">CLI (REPL) · TUI (Textual) — ввід і рендеринг</text>
+      <text class="lname" x="230" y="116" fill="#f0ab3c">application</text>
+      <text class="lsub"  x="230" y="135">dispatcher · handlers · AppResult / AppError</text>
+      <text class="lname" x="230" y="182" fill="#cdba6a">services</text>
+      <text class="lsub"  x="230" y="201">ContactsService — бізнес-логіка над репозиторієм</text>
+      <text class="lname" x="230" y="248" fill="#8fc098">repositories</text>
+      <text class="lsub"  x="230" y="267">ContactsRepository — колекція контактів + пошук</text>
+      <text class="lname" x="230" y="314" fill="#54c1cf">domain</text>
+      <text class="lsub"  x="230" y="333">Contact · Phone · Email · Address · Birthday + валідація</text>
+      <text class="lname" x="230" y="380" fill="#36c2ff">storage</text>
+      <text class="lsub"  x="230" y="399">pickle — атомарний запис + бекап + відновлення</text>
+
+      <circle cx="167" cy="52"  r="18" fill="#ffb000"/><text class="num" x="167" y="58"  text-anchor="middle">1</text>
+      <circle cx="167" cy="118" r="18" fill="#f0ab3c"/><text class="num" x="167" y="124" text-anchor="middle">2</text>
+      <circle cx="167" cy="184" r="18" fill="#cdba6a"/><text class="num" x="167" y="190" text-anchor="middle">3</text>
+      <circle cx="167" cy="250" r="18" fill="#8fc098"/><text class="num" x="167" y="256" text-anchor="middle">4</text>
+      <circle cx="167" cy="316" r="18" fill="#54c1cf"/><text class="num" x="167" y="322" text-anchor="middle">5</text>
+      <circle cx="167" cy="382" r="18" fill="#36c2ff"/><text class="num" x="167" y="388" text-anchor="middle">6</text>
+
+      <g stroke="#36c2ff">
+        <line x1="838" y1="52" x2="838" y2="382" stroke-opacity="0.5" stroke-width="1.5"/>
+        <line x1="810" y1="52"  x2="838" y2="52"  stroke-opacity="0.3"/>
+        <line x1="810" y1="118" x2="838" y2="118" stroke-opacity="0.3"/>
+        <line x1="810" y1="184" x2="838" y2="184" stroke-opacity="0.3"/>
+        <line x1="810" y1="250" x2="838" y2="250" stroke-opacity="0.3"/>
+        <line x1="810" y1="316" x2="838" y2="316" stroke-opacity="0.3"/>
+        <line x1="810" y1="382" x2="838" y2="382" stroke-opacity="0.3"/>
+        <line x1="838" y1="217" x2="872" y2="217" stroke-opacity="0.5" stroke-width="1.5"/>
+      </g>
+
+      <rect x="872" y="104" width="298" height="226" rx="16" fill="#36c2ff" fill-opacity="0.05" stroke="#36c2ff" stroke-opacity="0.5" stroke-dasharray="6 4"/>
+      <text class="cct" x="1021" y="136" text-anchor="middle">НАСКРІЗНІ МОДУЛІ</text>
+      <rect x="900" y="152" width="242" height="42" rx="10" fill="#36c2ff" fill-opacity="0.10" stroke="#36c2ff" stroke-opacity="0.3"/>
+      <text class="cc" x="1021" y="179" text-anchor="middle">localization</text>
+      <rect x="900" y="202" width="242" height="42" rx="10" fill="#36c2ff" fill-opacity="0.10" stroke="#36c2ff" stroke-opacity="0.3"/>
+      <text class="cc" x="1021" y="229" text-anchor="middle">suggestions</text>
+      <rect x="900" y="252" width="242" height="42" rx="10" fill="#36c2ff" fill-opacity="0.10" stroke="#36c2ff" stroke-opacity="0.3"/>
+      <text class="cc" x="1021" y="279" text-anchor="middle">ai</text>
+      <text class="note" x="1021" y="314" text-anchor="middle">пронизують усі шари</text>
+    </svg>
+    <p class="aside">Запит іде <b>згори вниз</b>; кожен шар тестується й замінюється окремо — від UI до диска.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="slide"
+    data-notes="Покажемо шлях конкретного запиту. Наприклад, команда add «Іван Петренко» +380991112233. Користувач вводить рядок. Диспетчер знаходить команду add і передає аргументи хендлеру в application. Хендлер просить сервіс створити контакт. Сервіс валідує через доменні моделі — Phone, Email, Birthday — і викликає репозиторій. Репозиторій додає контакт до колекції в пам'яті. При виході зі сесії storage зберігає все на диск. Жоден шар не лізе через голову сусіда. Команди працюють через репозиторій, а не через файл — саме тому формат сховища можна змінити (наприклад, на SQLite), не переписуючи команди.">
+    <div class="kicker">Потік виконання</div>
+    <h2><span class="num">04</span>Як рухаються дані</h2>
+    <div class="pipeline flow">
+      <span class="node">команда</span><span class="arrow">→</span>
+      <span class="node">диспетчер</span><span class="arrow">→</span>
+      <span class="node">use case</span><span class="arrow">→</span>
+      <span class="node">service</span><span class="arrow">→</span>
+      <span class="node">repository</span><span class="arrow">→</span>
+      <span class="node">storage</span>
+    </div>
+    <p class="aside">Жоден шар не лізе через голову сусіда — команди працюють через репозиторій, а не через файл.</p>
+  </section>
+
+  <!-- 6 -->
+  <section class="slide"
+    data-notes="Окремо наголосимо на валідації — це вимога ТЗ, і ми вирішили її принципово. Перевірка значень живе не в командах, а в доменних моделях. Телефон валідує клас Phone, email — Email, дату народження — Birthday, адресу — Address. Application-шар може лише припустити, на що схожий аргумент, але фінальне «коректно чи ні» завжди за доменом. Завдяки цьому валідація одна на весь проєкт: і CLI, і TUI поводяться однаково. Телефон ми ще й нормалізуємо до канонічного E.164 — тому 0991112233 і +380991112233 зберігаються однаково.">
+    <div class="kicker">Domain-First</div>
+    <h2><span class="num">05</span>Валідація живе в домені</h2>
+    <ul class="points">
+      <li>Валідація в доменних моделях: <code>Phone</code> · <code>Email</code> · <code>Birthday</code> · <code>Address</code></li>
+      <li>Application лише здогадується про тип — остаточну перевірку робить домен</li>
+      <li>Єдине джерело істини: однакова поведінка в CLI і TUI</li>
+      <li class="muted">Телефон нормалізується до канонічного <code>E.164</code></li>
+    </ul>
+  </section>
+
+  <!-- 7 -->
+  <section class="slide"
+    data-notes="У кожної команди три набори аліасів: англійський, український і ще один — кирилиця-QWERTY. Перші два очевидні. А третій — улюблений. Уявіть: ви в терміналі, забули перемкнути розкладку, пишете remove, а виходить куьщму. В більшості інструментів — помилка. У нас додаток просто розуміє, що ви мали на увазі. Диспетчер при цьому шукає найдовший збіг: якщо є add і add-phone, то add-phone ніколи не спрацює як add. Тому многослівні аліаси на кшталт «знайди телефон» теж працюють правильно.">
+    <div class="kicker">UX команд</div>
+    <h2><span class="num">06</span>Три набори аліасів</h2>
+    <div class="alias">
+      <div class="row"><span class="lbl">English</span><span class="chip">add</span><span class="chip">remove</span><span class="chip">search</span></div>
+      <div class="row"><span class="lbl">Українські</span><span class="chip">додати</span><span class="chip">видали</span><span class="chip">знайди</span></div>
+      <div class="row"><span class="lbl">Cyrillic-QWERTY</span><span class="chip hi">куьщму</span><span class="muted">= remove (забута розкладка)</span></div>
+    </div>
+    <p class="aside">Диспетчер бере <b>найдовший збіг</b> → <code>add-phone</code> не плутається з <code>add</code>.</p>
+  </section>
+
+  <!-- 8 -->
+  <section class="slide"
+    data-notes="Це пряма відповідь на вимогу ТЗ: дані зберігаються на диск і відновлюються після перезапуску. Лежать вони у pickle-файлі. Але просто pickle.dump нам не вистачало: якщо процес помре посеред запису, файл може злипнутися в невалідний стан. Тому ми зробили запис атомарним. Спершу пишемо в тимчасовий файл, потім викликаємо fsync — щоб ОС реально скинула байти на диск, — і тільки тоді перейменовуємо у фінальний. Rename атомарний на рівні файлової системи. Додатково ведемо копію .bak. При старті, якщо основний файл пустий або пошкоджений — пропонуємо відновитися з бекапу.">
+    <div class="kicker">Збереження даних</div>
+    <h2><span class="num">07</span>Сховище на pickle</h2>
+    <ul class="points">
+      <li>Файл <code>.data/address_book.pkl</code></li>
+      <li>Атомарний запис: <code>temp-файл</code> → <code>fsync</code> → <code>rename</code></li>
+      <li>Резервна копія <code>.bak</code>, відновлення при старті</li>
+    </ul>
+  </section>
+
+  <!-- 9 -->
+  <section class="slide"
+    data-notes="Це закриває пункт ТЗ про інтелектуальний аналіз. Помічник повинен вгадувати намір користувача. Ми реалізували це у три кроки. Крок перший — точний збіг. Крок другий — fuzzy через бібліотеку rapidfuzz, для дрібних одруківок: написали serch замість search — система здогадується. Крок третій вмикається тільки якщо впевненість fuzzy впала нижче 80 відсотків — тоді звертаємося до моделі Gemini, яка розпізнає навіть природну мову: «видали телефон Аліса» стає remove-phone Аліса. Поріг 80% — щоб не смикати API на кожну дрібницю, яку rapidfuzz розрулить швидше і безкоштовно.">
+    <div class="kicker">Інтелектуальний аналіз</div>
+    <h2><span class="num">08</span>Підказки команд у три кроки</h2>
+    <div class="steps">
+      <div class="step"><span class="n">1</span><span class="txt">Точний збіг<small>ім'я команди або аліас</small></span></div>
+      <div class="step"><span class="n">2</span><span class="txt">Fuzzy через <code>rapidfuzz</code><small>толерантність до одруківок: <code>serch</code> → <code>search</code></small></span></div>
+      <div class="step"><span class="n">3</span><span class="txt">AI-fallback (Gemini), якщо впевненість &lt; 80%<small>«видали телефон Аліса» → <code>remove-phone Аліса</code></small></span></div>
+    </div>
+  </section>
+
+  <!-- 10 -->
+  <section class="slide"
+    data-notes="Додаток підтримує дві мови: українську та англійську. Перемкнути можна без перезапуску. Реалізували це через власний MultiLangEnum і .ini-файли з текстами — окремі для кожної мови. Код ніколи не вшивав рядки напряму: замість print(«Контакт не знайдено») — ErrorCode.CONTACT_NOT_FOUND.render(name=name). Завдяки цьому всі тексти зосереджені в одному місці. Якщо треба додати третю мову — додаємо один .ini-файл і прописуємо код у enum, логіку не чіпаємо.">
+    <div class="kicker">i18n</div>
+    <h2><span class="num">09</span>Локалізація</h2>
+    <ul class="points">
+      <li>Дві мови: українська та англійська</li>
+      <li><code>MultiLangEnum</code> + <code>.ini</code>-файли</li>
+      <li>Перемикання в рантаймі</li>
+      <li class="muted">Жодних жорстко вшитих рядків → нова мова = один файл</li>
+    </ul>
+  </section>
+
+  <!-- 11 -->
+  <section class="slide"
+    data-notes="Введення ми побудували як маленьку ієрархію класів. Базовий BaseInput дає історію команд і автодоповнення через prompt_toolkit. Від нього успадковуються EditableInput — для однорядкового редагування готового тексту, наприклад тегів, — і TextInput для простого рядкового введення. Ключова деталь — фолбек. Якщо prompt_toolkit недоступний, система автоматично відкочується на стандартний input(). Додаток не падає, просто стає скромнішим. Хочемо, щоб проєкт запускався на будь-якому терміналі.">
+    <div class="kicker">Prompting</div>
+    <h2><span class="num">10</span>Система вводу</h2>
+    <ul class="points">
+      <li><code>BaseInput</code> → <code>EditableInput</code>, <code>TextInput</code></li>
+      <li>Історія команд + автодоповнення через <code>prompt_toolkit</code></li>
+      <li>Фолбек на стандартний <code>input()</code>, якщо середовище не тягне</li>
+    </ul>
+  </section>
+
+  <!-- 12 -->
+  <section class="slide"
+    data-notes="Звичайний CLI ми не лишили голим. Для виводу використовуємо бібліотеку Rich. Один контакт показується карткою, список — таблицею, а найближчі дні народження — окремою таблицею іменинників. Статуси кольорові: успіх, попередження й помилку видно одразу. Є вітальний екран на старті й інлайн-підказки під час редагування. Якщо термінал вузький — картки й таблиці звужуються. Це не просто краса: читабельний вивід — частина зручності, заради якої ми робили інструмент.">
+    <div class="kicker">Презентація даних</div>
+    <h2><span class="num">11</span>Rich CLI</h2>
+    <ul class="points">
+      <li>Картки контактів, таблиця контактів, таблиця іменинників</li>
+      <li>Кольорові статуси, вітальний екран, інлайн-підказки</li>
+      <li>Адаптивний вивід — звужується на вузьких терміналах</li>
+    </ul>
+  </section>
+
+  <!-- 13 -->
+  <section class="slide"
+    data-notes="Нотатки й теги ми редагуємо інтерактивно, прямо під карткою контакту. Команда edit-note відкриває багаторядковий редактор: поточний текст нотатки вже завантажений. Enter — новий рядок, Ctrl+S — зберегти, Esc — скасувати без змін. Команда edit-tags працює так само, але однорядкова: показує наявні теги, розділювачі — кома або крапка з комою; якщо лишити поле порожнім — теги видаляються, з підтвердженням. Технічно це працює через резолвери введення: вони перехоплюють рядок ще до диспетчера команд і вмикають потрібний редактор.">
+    <div class="kicker">Інтерактивні редактори</div>
+    <h2><span class="num">12</span>Редагування нотаток і тегів</h2>
+    <ul class="points">
+      <li><code>edit-note</code> — багаторядковий редактор нотатки під карткою</li>
+      <li><code>edit-tags</code> — однорядковий редактор тегів</li>
+      <li>Передзавантаження поточного значення; <code>Ctrl+S</code> — зберегти, <code>Esc</code> — скасувати</li>
+    </ul>
+  </section>
+
+  <!-- 14 -->
+  <section class="slide"
+    data-notes="Тепер про AI-режим. Асистента ми назвали Арні — натяк на виконавця ролі T-800. Під капотом — Gemini 3.1 Flash Lite через pydantic-ai. Арні живе в TUI і відповідає на природну мову: «Покажи всі контакти», «Знайди когось з тегом work», «Додай Іванові номер» — і реально це виконує. Найважливіше — як влаштовані інструменти агента. Ми зробили їх дзеркалом методів ContactsService, один-до-одного. AI не отримує окремого чорного ходу до даних і не пише в сховище напряму. Тому агент фізично не може зробити те, чого не може зробити користувач руками.">
+    <div class="kicker">AI-режим</div>
+    <h2><span class="num">13</span>Асистент «Арні»</h2>
+    <ul class="points">
+      <li>Модель <code>Gemini 3.1 Flash Lite</code> через <code>pydantic-ai</code></li>
+      <li>Інструменти агента = методи <code>ContactsService</code> один-до-одного</li>
+      <li class="muted">AI не пише в сховище напряму — лише через сервіс</li>
+    </ul>
+  </section>
+
+  <!-- 15 -->
+  <section class="slide"
+    data-notes="Окрема функція, якою ми пишаємося — suggest-tags. Вона аналізує контакт і пропонує до семи релевантних тегів. Користувач бачить пропозицію в тому самому інлайн-редакторі, що й edit-tags, може відредагувати і підтвердити. Без підтвердження нічого не зберігається. Але тут важливий момент — приватність. Перш ніж відправити дані в модель, ми маскуємо телефон: передаємо тільки код країни й зірочки. Рядок адреси взагалі не йде в запит. Модель отримує рівно стільки, скільки потрібно для змістовних тегів — і ні рядком більше.">
+    <div class="kicker">AI + приватність</div>
+    <h2><span class="num">14</span>suggest-tags</h2>
+    <ul class="points">
+      <li><code>suggest-tags</code> — AI пропонує до 7 тегів, користувач підтверджує</li>
+      <li>Маскує телефон (<code>+XXX*****</code>), не шле рядок адреси в модель</li>
+      <li class="muted">Без підтвердження нічого не зберігається</li>
+    </ul>
+  </section>
+
+  <!-- 16 -->
+  <section class="slide"
+    data-notes="Тепер покажемо TUI. Він двопанельний: зліва контакти на 70 відсотків ширини — бо це головне, — справа чат з Арні на 30 відсотків. Панель контактів не використовує CLI-презентер напряму. TUI рендерить у вікно фіксованої ширини, а CLI — у ширину терміналу, тож вимоги до виводу різні. Тому для Textual зроблено окремий шар Rich-компонентів, який правильно вписується у вузьку панель.">
+    <div class="kicker">TUI</div>
+    <h2><span class="num">15</span>Двопанельний інтерфейс</h2>
+    <div class="panes">
+      <div class="p left"><div class="h">КОНТАКТИ · 70%</div><div class="bar m"></div><div class="bar s"></div><div class="bar l"></div><div class="bar m"></div></div>
+      <div class="p right"><div class="h">ЧАТ · АРНІ · 30%</div><div class="bar l"></div><div class="bar s"></div><div class="msg">&gt; Покажи всі контакти</div></div>
+    </div>
+    <p class="aside">Власний шар Rich-рендерингу для панелі контактів (окремий від CLI).</p>
+  </section>
+
+  <!-- 17 -->
+  <section class="slide"
+    data-notes="Ще одна річ у TUI. Арні вміє не тільки читати дані, а й змінювати їх. Конкретно — теги, через інструменти set_tags_from_text і clear_tags. Тобто прямо в чаті можна написати «Встав тег work і friends для Івана» — і контакт реально зміниться. Але тут знову той самий принцип: обидва інструменти — це ті самі методи ContactsService, що й у CLI. AI не пише в сховище напряму. Він просить сервіс, сервіс робить перевірку, сервіс пише. Все під контролем детермінованого кору.">
+    <div class="kicker">AI-мутації</div>
+    <h2><span class="num">16</span>Агент міняє теги прямо в чаті</h2>
+    <ul class="points">
+      <li>Мутація тегів через агента: <code>set_tags_from_text</code>, <code>clear_tags</code></li>
+      <li class="muted">«Встав тег work і friends для Івана» → контакт оновлено</li>
+      <li class="muted">Ті самі методи сервісу — все під контролем детермінованого кору</li>
+    </ul>
+  </section>
+
+  <!-- 18 -->
+  <section class="slide"
+    data-notes="Про надійність. У нас 741 тест, і всі проходять. Ганяли їх щойно перед захистом, командою uv run pytest. Покривають усі шари: domain, services, repositories, storage, підказки команд, локалізацію, CLI-хендлери, інтерактивні редактори. Якість коду тримаємо на ruff і mypy. У CI на GitHub Actions автоматично запускаються ruff і pytest на кожен пуш — зламаний код фізично не може злитися в main. Mypy ганяємо локально перед комітом.">
+    <div class="kicker">Надійність</div>
+    <h2><span class="num">17</span>Тести та якість коду</h2>
+    <ul class="points">
+      <li><b style="color:var(--ok)">741 тест</b>, усі проходять (<code>uv run pytest</code>)</li>
+      <li><code>ruff</code> і <code>mypy</code> для якості коду</li>
+      <li>CI на GitHub Actions: <code>ruff</code> + <code>pytest</code> на кожен пуш</li>
+    </ul>
+  </section>
+
+  <!-- 19 -->
+  <section class="slide"
+    data-notes="Куди рухаємось далі. Найприродніший крок — SQLite замість pickle. Сховище в нас винесене в окремий шар, а команди й сервіси працюють через репозиторій і не торкаються файлу напряму. Тому SQLite — це новий адаптер сховища, а не переписування команд. Чесно скажемо: формального інтерфейсу репозиторія поки немає — сервіс прив'язаний до конкретного ContactsRepository, тож його ми б виділили разом із SQLite. Далі — export та import даних, ширша AI-валідація телефонів і адрес (база вже є), і розширення TUI на спільний command-layer.">
+    <div class="kicker">Roadmap</div>
+    <h2><span class="num">18</span>Подальший розвиток</h2>
+    <ul class="points">
+      <li>SQLite-адаптер: сховище в окремому шарі, команди не торкаються файлу</li>
+      <li>Export / import даних</li>
+      <li>Ширша AI-валідація телефонів і адрес <span class="muted">(база вже є)</span></li>
+      <li>Розширення TUI на спільний command-layer</li>
+    </ul>
+  </section>
+
+  <!-- 20 -->
+  <section class="slide final"
+    data-notes="Підсумуємо. Ми зробили персонального помічника для контактів і нотаток із чистою шаровою архітектурою, надійним атомарним сховищем, багатомовними аліасами, локалізацією і AI-режимом, який лишається опційним. Всі вимоги ТЗ — і основні, і додаткові — реалізовані. Найбільше ми навчилися не на фічах, а на конкретних задачах: як зробити запис на диск так, щоб дані не зникли при збої; де AI справді допомагає, а де лише ускладнює; чому межі між шарами треба тримати жорстко від самого початку. Дякуємо за увагу. Готові відповісти на запитання.">
+    <div class="kicker">Підсумки</div>
+    <h2>Що зробили — і чого навчилися</h2>
+    <ul class="points">
+      <li>Усі вимоги ТЗ виконано — основні (90) і додаткові (10)</li>
+      <li>Чиста шарова архітектура · надійне сховище · AI як опційний шар</li>
+      <li>741 тест · ruff · mypy · CI</li>
+    </ul>
+    <div class="thanks">Дякуємо за увагу! <span class="q">Готові до запитань.</span></div>
+  </section>
+
+</div>
+
+<div id="counter">01 / 20</div>
+<div id="brand"><b>Assistant&nbsp;T800</b> · захист проєкту</div>
+
+<div id="notes"><h4>Сценарій доповідача</h4><div id="notes-body"></div></div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var i = 0, total = slides.length;
+  var counter = document.getElementById('counter');
+  var progress = document.getElementById('progress');
+  var notes = document.getElementById('notes');
+  var notesBody = document.getElementById('notes-body');
+  var pad = function(n){return (n<10?'0':'')+n;};
+
+  function render(){
+    slides.forEach(function(s,idx){ s.classList.toggle('active', idx===i); });
+    counter.textContent = pad(i+1)+' / '+pad(total);
+    progress.style.width = ((i)/(total-1)*100)+'%';
+    if(notes.classList.contains('show')){
+      notesBody.textContent = slides[i].getAttribute('data-notes')||'—';
+    }
+  }
+  function go(n){ i = Math.max(0, Math.min(total-1, n)); render(); }
+  function next(){ go(i+1); } function prev(){ go(i-1); }
+
+  document.addEventListener('keydown', function(e){
+    if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){ e.preventDefault(); next(); }
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){ e.preventDefault(); prev(); }
+    else if(e.key==='Home'){ go(0); }
+    else if(e.key==='End'){ go(total-1); }
+    else if(e.key==='f'||e.key==='F'){ if(!document.fullscreenElement){document.documentElement.requestFullscreen();}else{document.exitFullscreen();} }
+    else if(e.key==='s'||e.key==='S'){ notes.classList.toggle('show'); render(); }
+  });
+  // click zones: only edges navigate, and never while selecting text
+  var _down = null;
+  var deckEl = document.getElementById('deck');
+  deckEl.addEventListener('mousedown', function(e){ _down = {x:e.clientX, y:e.clientY}; });
+  deckEl.addEventListener('mouseup', function(e){
+    var d = _down; _down = null;
+    if(!d) return;
+    if(Math.abs(e.clientX-d.x) + Math.abs(e.clientY-d.y) > 6) return;   // drag → selection
+    if(window.getSelection && String(window.getSelection()).length) return; // text selected
+    var x = e.clientX / window.innerWidth;
+    if(x>0.72) next(); else if(x<0.28) prev();   // only outer edges advance
+  });
+  // touch
+  var tx=null;
+  document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;},{passive:true});
+  document.addEventListener('touchend',function(e){
+    if(tx===null)return; var dx=e.changedTouches[0].clientX-tx;
+    if(Math.abs(dx)>40){ dx<0?next():prev(); } tx=null;
+  },{passive:true});
+
+  // deep-link via #N (initial + live hash changes)
+  window.addEventListener('hashchange', function(){
+    var n = parseInt((location.hash||'').replace('#',''),10);
+    if(!isNaN(n)) go(n-1);
+  });
+  var h = parseInt((location.hash||'').replace('#',''),10);
+  if(!isNaN(h)) i = Math.max(0,Math.min(total-1,h-1));
+  render();
+})();
+</script>
+</body>
+</html>
