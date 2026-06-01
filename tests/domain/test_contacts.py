@@ -408,3 +408,20 @@ def test_clear_tags_removes_all_tags():
     contact.clear_tags()
 
     assert contact.tags == set()
+
+
+def test_remove_tag_removes_normalized_tag():
+    contact = Contact(Name("Іван"))
+    contact.set_tags(("work", "family"))
+
+    contact.remove_tag("  WORK ")
+
+    assert contact.tags == {"family"}
+
+
+def test_remove_tag_raises_when_tag_missing():
+    contact = Contact(Name("Іван"))
+    contact.add_tag("work")
+
+    with pytest.raises(ValueError):
+        contact.remove_tag("missing")

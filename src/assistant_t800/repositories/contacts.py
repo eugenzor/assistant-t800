@@ -1,5 +1,6 @@
 """In-memory contact repository implementation."""
 
+import calendar
 from datetime import date, datetime, timedelta
 from typing import Optional
 
@@ -125,6 +126,19 @@ class ContactsRepository:
 
             return birthday_date + timedelta(days=shift_days)
 
+        def birthday_in_year(birthday_date: date, year: int) -> date:
+            """Project a birthday onto a target year.
+
+            Only a 29 February birthday can become invalid when the year
+            changes; in a non-leap target year it is celebrated on 28 February.
+            """
+            is_feb29 = birthday_date.month == 2 and birthday_date.day == 29
+
+            if is_feb29 and not calendar.isleap(year):
+                return birthday_date.replace(year=year, day=28)
+
+            return birthday_date.replace(year=year)
+
         today = datetime.now().date()
         period_end = today + timedelta(days=days)
         result: list[BirthdaysListContact] = []
@@ -134,11 +148,11 @@ class ContactsRepository:
                 continue
 
             birthday = contact.birthday.date
-            birthday_date = birthday.replace(year=today.year)
+            birthday_date = birthday_in_year(birthday, today.year)
             congratulation_date = get_congratulation_date(birthday_date)
 
             if congratulation_date < today:
-                birthday_date = birthday.replace(year=today.year + 1)
+                birthday_date = birthday_in_year(birthday, today.year + 1)
                 congratulation_date = get_congratulation_date(birthday_date)
 
             if today <= congratulation_date <= period_end:
