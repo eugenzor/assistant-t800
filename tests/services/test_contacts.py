@@ -605,7 +605,9 @@ def test_tag_suggestion_snapshot_includes_note_and_address(service):
 
     service.add_contact("Іван")
     service.set_note("Іван", "Менеджер з продажів")
-    parsed = ParsedAddress(country="Україна", city="м. Київ", address_line="вул. Хрещатик, 1")
+    parsed = ParsedAddress(
+        country="Україна", city="м. Київ", address_line="вул. Хрещатик, 1"
+    )
     service.set_address("Іван", "Khreshchatyk 1", parsed)
 
     snapshot = service.tag_suggestion_snapshot("Іван")
