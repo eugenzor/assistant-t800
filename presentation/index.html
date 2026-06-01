@@ -129,6 +129,22 @@
   .panes .bar.s{width:70%}.panes .bar.m{width:90%}.panes .bar.l{width:55%}
   .panes .msg{font-family:var(--mono);font-size:13px;color:var(--muted);margin-top:auto}
 
+  /* images */
+  .shot{display:block;border:1px solid var(--line);border-radius:12px;
+    box-shadow:0 8px 30px rgba(0,0,0,.45);object-fit:cover}
+  .caption{color:var(--muted);font-family:var(--mono);font-size:clamp(11px,1.2vw,14px);
+    letter-spacing:.5px;margin-top:10px}
+  .cover .hero{display:flex;gap:48px;align-items:center;width:100%}
+  .cover .hero .htext{flex:1 1 auto}
+  .cover .hero .hpic{flex:0 0 38%;max-width:480px}
+  .cover .hero .hpic .shot{width:100%;height:auto}
+  .split{display:flex;gap:40px;align-items:center}
+  .split .scol{flex:1 1 auto;min-width:0}
+  .split .spic{flex:0 0 28%;max-width:320px}
+  .split .spic .shot{width:100%;height:auto}
+  .split .points{gap:13px}
+  .split .points li{font-size:clamp(16px,2vw,25px)}
+
   /* summary big */
   .slide.final h2{font-size:clamp(30px,5vw,64px)}
   .thanks{font-size:clamp(28px,5vw,68px);font-weight:800;margin-top:10px}
@@ -148,6 +164,7 @@
     .alias .lbl{min-width:auto}
     .panes{height:auto;flex-direction:column}
     .panes .left,.panes .right{flex:auto}
+    .cover .hero,.split{flex-direction:column}
   }
 </style>
 </head>
@@ -159,13 +176,21 @@
   <!-- 1 -->
   <section class="slide cover active"
     data-notes="Доброго дня. Представляємо нашу команду і наш проєкт — Assistant T800. Нас п'ятеро: Viktor Gorbachov, Eugene Galenko, Roman Gadyuchko, Ganna Temirgalina, Viacheslav Konashkov, група project-group-5. Ми розробили персонального CLI/TUI-помічника для керування контактами і нотатками, з опційним AI-режимом. Зараз розкажемо, що саме ми зробили і як це влаштовано.">
-    <div class="logo">PERSONAL ASSISTANT · CLI / TUI</div>
-    <h1 class="title">Assistant&nbsp;T800</h1>
-    <div class="sub">Термінальний помічник для контактів і нотаток з опційним AI-режимом «Арні»</div>
-    <div class="meta">
-      <b>Автори:</b> Viktor Gorbachov · Eugene Galenko · Roman Gadyuchko · Ganna Temirgalina · Viacheslav Konashkov<br>
-      <b>Група:</b> project-group-5<br>
-      <b>Дата захисту:</b> 01.06.2026
+    <div class="hero">
+      <div class="htext">
+        <div class="logo">PERSONAL ASSISTANT · CLI / TUI</div>
+        <h1 class="title">Assistant&nbsp;T800</h1>
+        <div class="sub">Термінальний помічник для контактів і нотаток з опційним AI-режимом «Арні»</div>
+        <div class="meta">
+          <b>Автори:</b> Viktor Gorbachov · Eugene Galenko · Roman Gadyuchko · Ganna Temirgalina · Viacheslav Konashkov<br>
+          <b>Група:</b> project-group-5<br>
+          <b>Дата захисту:</b> 01.06.2026
+        </div>
+      </div>
+      <div class="hpic">
+        <img class="shot" src="img/address-book.jpg" alt="Пошук у адресній книзі (Термінатор)">
+        <div class="caption">Колись пошук контактів виглядав так</div>
+      </div>
     </div>
   </section>
 
@@ -324,6 +349,8 @@
     data-notes="Окремо наголосимо на валідації — це вимога ТЗ. Перевірка значень живе не в командах, а в доменних моделях: телефон валідує Phone, email — Email, дату — Birthday, адресу — Address. Application лише припускає тип аргументу, фінальне «коректно чи ні» завжди за доменом — тому й CLI, і TUI поводяться однаково. Телефон нормалізується до E.164 і валідується за форматом — 10 до 15 цифр, українські формати приводяться до +380. Важлива деталь: парсер телефону вже розпізнає оператора й місто за кодом — Kyivstar, Vodafone, lifecell, Львів, Київ — і складає це в структуру ParsedPhone.owner. Поки що ми це не виводимо в картку, але інфраструктура готова — вивід оператора біля номера це найближчий наступний крок. Тепер про обробку телефонів і адрес. У нас два набори парсерів. Детермінований лежить у шарі services, AI-парсери — в окремому модулі ai, це наскрізний модуль збоку від основного стеку. Оркеструє їх рівень application, файл normalizers.py: спершу пробуємо детермінований парсер, і лише якщо він не дав результату — вмикаємо AI як fallback. Тому якщо детермінований упорався, AI взагалі не викликається, обробка миттєва. Інтерфейси CLI і TUI цих парсерів напряму не торкаються — вони звертаються через application. Для адрес AI має детальні промпти, що домислюють повну адресу по частковим даним — країну, місто, індекс.">
     <div class="kicker">Domain-First + AI-fallback</div>
     <h2><span class="num">05</span>Валідація живе в домені</h2>
+    <div class="split">
+      <div class="scol">
     <ul class="points">
       <li>Валідація в доменних моделях: <code>Phone</code> · <code>Email</code> · <code>Birthday</code> · <code>Address</code> — єдине джерело істини</li>
       <li>Телефон → канонічний <code>E.164</code>; валідація формату (10–15 цифр)</li>
@@ -331,6 +358,12 @@
       <li>Два набори парсерів: детермінований (<code>services/</code>) + AI-fallback (<code>ai/</code>), оркеструються в <code>application/normalizers.py</code></li>
       <li class="muted">Детермінований упорався → AI не викликається → миттєво. Інакше AI домислює адресу по частковим даним</li>
     </ul>
+      </div>
+      <div class="spic">
+        <img class="shot" src="img/call.jpg" alt="T-800 телефонує з будки">
+        <div class="caption">Валідацію завершено. Цілі підтверджено.</div>
+      </div>
+    </div>
   </section>
 
   <!-- 7 -->
@@ -450,11 +483,9 @@
     data-notes="Тепер покажемо TUI. Він двопанельний: зліва контакти на 70 відсотків ширини — бо це головне, — справа чат з Арні на 30 відсотків. Панель контактів не використовує CLI-презентер напряму. TUI рендерить у вікно фіксованої ширини, а CLI — у ширину терміналу, тож вимоги до виводу різні. Тому для Textual зроблено окремий шар Rich-компонентів, який правильно вписується у вузьку панель.">
     <div class="kicker">TUI</div>
     <h2><span class="num">15</span>Двопанельний інтерфейс</h2>
-    <div class="panes">
-      <div class="p left"><div class="h">КОНТАКТИ · 70%</div><div class="bar m"></div><div class="bar s"></div><div class="bar l"></div><div class="bar m"></div></div>
-      <div class="p right"><div class="h">ЧАТ · АРНІ · 30%</div><div class="bar l"></div><div class="bar s"></div><div class="msg">&gt; Покажи всі контакти</div></div>
-    </div>
-    <p class="aside">Власний шар Rich-рендерингу для панелі контактів (окремий від CLI).</p>
+    <img class="shot" src="img/interface.svg" alt="Реальний TUI Assistant T800: контакти зліва, чат з Арні справа"
+         style="width:100%;max-width:1120px;max-height:54vh;margin:0 auto">
+    <p class="aside">Реальний TUI: контакти 70% зліва, чат з «Арні» 30% справа. Власний шар Rich-рендерингу, окремий від CLI.</p>
   </section>
 
   <!-- 17 -->
