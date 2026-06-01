@@ -532,3 +532,86 @@ def test_set_address_stores_parsed_address(service):
     assert contact.address.value == "Khreshchatyk 1"
     assert contact.parsed_address == parsed
     assert contact.formatted_address == "Україна, м. Київ, вул. Хрещатик, 1"
+
+
+# ---------- clean_suggested_tags ----------
+
+
+def test_clean_suggested_tags_normalizes_and_dedups(service):
+    service.add_contact("Іван")
+
+    result = service.clean_suggested_tags(["  Work ", "WORK", "friend"], "Іван")
+
+    assert result == ["work", "friend"]
+
+
+def test_clean_suggested_tags_drops_existing_tags(service):
+    service.add_contact("Іван")
+    service.set_tags_from_text("Іван", "work")
+
+    result = service.clean_suggested_tags(["work", "family"], "Іван")
+
+    assert result == ["family"]
+
+
+def test_clean_suggested_tags_caps_at_max(service):
+    from assistant_t800.ai.tag_suggester import MAX_SUGGESTED_TAGS
+
+    service.add_contact("Іван")
+    raw = [f"tag{i}" for i in range(MAX_SUGGESTED_TAGS + 5)]
+
+    result = service.clean_suggested_tags(raw, "Іван")
+
+    assert len(result) == MAX_SUGGESTED_TAGS
+
+
+def test_clean_suggested_tags_skips_blank_and_non_strings(service):
+    service.add_contact("Іван")
+
+    result = service.clean_suggested_tags(["", "   ", "valid"], "Іван")
+
+    assert result == ["valid"]
+
+
+def test_clean_suggested_tags_raises_for_missing_contact(service):
+    with pytest.raises(KeyError):
+        service.clean_suggested_tags(["work"], "Unknown")
+
+
+# ---------- tag_suggestion_snapshot ----------
+
+
+def test_tag_suggestion_snapshot_includes_name_and_tags(service):
+    service.add_contact("Іван")
+    service.set_tags_from_text("Іван", "work; friend")
+
+    snapshot = service.tag_suggestion_snapshot("Іван")
+
+    assert snapshot["name"] == "Іван"
+    assert snapshot["tags"] == ["friend", "work"]
+
+
+def test_tag_suggestion_snapshot_omits_empty_fields(service):
+    service.add_contact("Іван")
+
+    snapshot = service.tag_suggestion_snapshot("Іван")
+
+    # No address, note or tags -> only the non-empty name remains.
+    assert snapshot == {"name": "Іван"}
+
+
+def test_tag_suggestion_snapshot_includes_note_and_address(service):
+    from assistant_t800.domain.addresses import ParsedAddress
+
+    service.add_contact("Іван")
+    service.set_note("Іван", "Менеджер з продажів")
+    parsed = ParsedAddress(
+        country="Україна", city="м. Київ", address_line="вул. Хрещатик, 1"
+    )
+    service.set_address("Іван", "Khreshchatyk 1", parsed)
+
+    snapshot = service.tag_suggestion_snapshot("Іван")
+
+    assert snapshot["note"] == "Менеджер з продажів"
+    assert snapshot["country"] == "Україна"
+    assert snapshot["city"] == "м. Київ"

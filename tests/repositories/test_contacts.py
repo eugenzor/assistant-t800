@@ -564,3 +564,48 @@ def test_search_upcoming_birthdays_age_reflects_year_of_congratulation(freeze_to
     assert len(result) == 1
     assert result[0].age == "36"
     assert result[0].congratulation_date == "05.01.2026"
+
+
+def test_search_upcoming_birthdays_feb29_in_non_leap_year(freeze_today):
+    # 2025 is not a leap year: a 29.02 birthday must not crash and is
+    # celebrated on 28.02 (date.replace would otherwise raise ValueError).
+    freeze_today(date(2025, 2, 20))
+    repo = ContactsRepository()
+    contact = _make_contact("Високосний")
+    contact.set_birthday("29.02.2000")
+    repo.add(contact)
+
+    result = repo.search_upcoming_birthdays(14)
+
+    assert len(result) == 1
+    assert result[0].birthday == "29.02.2000"
+    assert result[0].congratulation_date == "28.02.2025"
+
+
+def test_search_upcoming_birthdays_feb29_in_leap_year(freeze_today):
+    # 2028 is a leap year, so the 29.02 birthday lands on the real date.
+    freeze_today(date(2028, 2, 20))
+    repo = ContactsRepository()
+    contact = _make_contact("Високосний")
+    contact.set_birthday("29.02.2000")
+    repo.add(contact)
+
+    result = repo.search_upcoming_birthdays(14)
+
+    assert len(result) == 1
+    assert result[0].congratulation_date == "29.02.2028"
+    assert result[0].age == "28"
+
+
+def test_search_upcoming_birthdays_feb29_does_not_raise_across_window(freeze_today):
+    # Regression guard: scanning a full year (incl. the Feb 29 rollover branch)
+    # must never raise for a 29.02 contact.
+    freeze_today(date(2025, 3, 1))
+    repo = ContactsRepository()
+    contact = _make_contact("Високосний")
+    contact.set_birthday("29.02.2000")
+    repo.add(contact)
+
+    result = repo.search_upcoming_birthdays(400)
+
+    assert len(result) == 1
